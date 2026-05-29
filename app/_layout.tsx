@@ -19,6 +19,7 @@ export default function RootLayout() {
           <Stack.Screen name="grupo/crear" options={{ headerShown: true, title: 'Crear Grupo', headerStyle: { backgroundColor: C.surface }, headerTintColor: C.textPrimary, headerShadowVisible: false }} />
           <Stack.Screen name="grupo/unirse" options={{ headerShown: true, title: 'Unirse a Grupo', headerStyle: { backgroundColor: C.surface }, headerTintColor: C.textPrimary, headerShadowVisible: false }} />
           <Stack.Screen name="grupo/[id]" options={{ headerShown: true, title: 'Grupo', headerStyle: { backgroundColor: C.surface }, headerTintColor: C.textPrimary, headerShadowVisible: false }} />
+          <Stack.Screen name="admin" options={{ headerShown: true, title: 'Administrador', headerStyle: { backgroundColor: C.surface }, headerTintColor: C.textPrimary, headerShadowVisible: false }} />
         </Stack>
         <StatusBar style="dark" />
       </View>

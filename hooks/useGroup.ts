@@ -14,6 +14,7 @@ import {
 import { db } from '../lib/firebase';
 import { Group } from '../types';
 import { useAuth } from '../contexts/AuthContext';
+import { MAX_GROUP_MEMBERS } from '../constants/admin';
 
 function generateCode(): string {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -72,6 +73,10 @@ export function useGroups() {
       const group = { id: groupDoc.id, ...groupDoc.data() } as Group;
 
       if (group.members.includes(user.uid)) throw new Error('Ya eres miembro de este grupo');
+
+      if (group.members.length >= MAX_GROUP_MEMBERS) {
+        throw new Error(`El grupo está completo (máximo ${MAX_GROUP_MEMBERS} miembros)`);
+      }
 
       await updateDoc(doc(db, 'groups', group.id), {
         members: arrayUnion(user.uid),

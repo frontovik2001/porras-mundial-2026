@@ -1,16 +1,11 @@
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  TextInput,
-  Pressable,
-  StyleSheet,
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
+  View, Text, TextInput, Pressable, StyleSheet,
+  ActivityIndicator, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useGroups } from '../../hooks/useGroup';
+import { C } from '../../constants/theme';
 
 export default function UnirseGrupoScreen() {
   const { joinGroup } = useGroups();
@@ -32,14 +27,14 @@ export default function UnirseGrupoScreen() {
   }
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: '#0f172a' }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: C.bg }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={styles.container}>
         <Text style={styles.subtitle}>Pide el código de 6 letras al creador del grupo</Text>
 
         <TextInput
           style={styles.input}
           placeholder="ABC123"
-          placeholderTextColor="#475569"
+          placeholderTextColor={C.textTertiary}
           value={code}
           onChangeText={(t) => setCode(t.toUpperCase())}
           autoCapitalize="characters"
@@ -59,25 +54,22 @@ export default function UnirseGrupoScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 24, gap: 16, paddingTop: 24 },
-  subtitle: { color: '#64748b', fontSize: 14, lineHeight: 22 },
+  subtitle: { color: C.textSecondary, fontSize: 14, lineHeight: 22 },
   input: {
-    backgroundColor: '#1e293b',
-    borderRadius: 12,
+    backgroundColor: C.surface,
+    borderRadius: 14,
     paddingHorizontal: 16,
-    paddingVertical: 14,
-    color: '#f1f5f9',
+    paddingVertical: 15,
+    color: C.textPrimary,
     fontSize: 28,
     fontWeight: '800',
     textAlign: 'center',
     letterSpacing: 8,
+    borderWidth: 1,
+    borderColor: C.border,
   },
-  error: { color: '#ef4444', fontSize: 13 },
-  btn: {
-    backgroundColor: '#6366f1',
-    borderRadius: 12,
-    paddingVertical: 15,
-    alignItems: 'center',
-  },
+  error: { color: C.miss, fontSize: 13 },
+  btn: { backgroundColor: C.accent, borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
   btnDisabled: { opacity: 0.5 },
   btnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 });

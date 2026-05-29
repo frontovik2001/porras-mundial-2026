@@ -7,11 +7,13 @@ import { router } from 'expo-router';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePredictions } from '../../hooks/usePredictions';
 import { ALL_MATCHES } from '../../constants/matches';
+import { isAdmin } from '../../constants/admin';
 import { C, SHADOW } from '../../constants/theme';
 
 export default function PerfilScreen() {
-  const { profile, logOut, updateDisplayName } = useAuth();
+  const { user, profile, logOut, updateDisplayName } = useAuth();
   const { predictions } = usePredictions();
+  const admin = isAdmin(user?.uid);
 
   const [editingName, setEditingName] = useState(false);
   const [newName, setNewName] = useState(profile?.displayName ?? '');
@@ -100,6 +102,12 @@ export default function PerfilScreen() {
         <View style={styles.infoRow}><Text style={[styles.infoPts, { color: C.miss }]}>0 pts</Text><Text style={styles.infoDesc}>Fallo</Text></View>
       </View>
 
+      {admin ? (
+        <Pressable style={styles.adminBtn} onPress={() => router.push('/admin')}>
+          <Text style={styles.adminText}>⚙️ Panel de administrador</Text>
+        </Pressable>
+      ) : null}
+
       <Pressable style={styles.logoutBtn} onPress={handleLogout}>
         <Text style={styles.logoutText}>Cerrar sesión</Text>
       </Pressable>
@@ -147,6 +155,8 @@ const styles = StyleSheet.create({
   infoRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   infoPts: { fontSize: 15, fontWeight: '800', width: 44 },
   infoDesc: { color: C.textPrimary, fontSize: 14 },
-  logoutBtn: { margin: 16, marginTop: 'auto', backgroundColor: C.surface, borderRadius: 14, paddingVertical: 15, alignItems: 'center', borderWidth: 1, borderColor: '#FCA5A5' },
+  adminBtn: { marginHorizontal: 16, marginTop: 'auto', backgroundColor: C.accentLight, borderRadius: 14, paddingVertical: 15, alignItems: 'center' },
+  adminText: { color: C.accent, fontSize: 16, fontWeight: '700' },
+  logoutBtn: { margin: 16, backgroundColor: C.surface, borderRadius: 14, paddingVertical: 15, alignItems: 'center', borderWidth: 1, borderColor: '#FCA5A5' },
   logoutText: { color: C.miss, fontSize: 16, fontWeight: '700' },
 });

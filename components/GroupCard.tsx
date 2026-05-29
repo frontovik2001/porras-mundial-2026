@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Group } from '../types';
 import { C, SHADOW } from '../constants/theme';
+import { MAX_GROUP_MEMBERS } from '../constants/admin';
 
 interface Props {
   group: Group;
@@ -16,7 +17,7 @@ export function GroupCard({ group, onPress }: Props) {
       </View>
       <View style={styles.info}>
         <Text style={styles.name} numberOfLines={1}>{group.name}</Text>
-        <Text style={styles.sub}>{group.members.length} participantes · Código: <Text style={styles.code}>{group.code}</Text></Text>
+        <Text style={styles.sub}>{group.members.length}/{MAX_GROUP_MEMBERS} miembros · Código: <Text style={styles.code}>{group.code}</Text></Text>
       </View>
       <Text style={styles.arrow}>›</Text>
     </Pressable>
