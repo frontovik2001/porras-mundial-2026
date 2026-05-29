@@ -6,10 +6,6 @@
     "orientation": "portrait",
     "scheme": "porras-mundial",
     "userInterfaceStyle": "light",
-    "splash": {
-      "resizeMode": "contain",
-      "backgroundColor": "#F5F5F7"
-    },
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.porrasmundial.app"
@@ -18,13 +14,11 @@
       "adaptiveIcon": {
         "backgroundColor": "#F5F5F7"
       },
-      "package": "com.porrasmundial.app",
-      "versionCode": 1
+      "package": "com.porrasmundial.app"
     },
     "web": {
       "bundler": "metro",
-      "output": "static",
-      "favicon": "./assets/favicon.png"
+      "output": "static"
     },
     "plugins": [
       "expo-router",
