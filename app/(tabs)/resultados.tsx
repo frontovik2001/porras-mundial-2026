@@ -9,8 +9,9 @@ import { Match } from '../../types';
 import { C, SHADOW } from '../../constants/theme';
 import { computeAllStandings } from '../../lib/standings';
 import { GroupStandingTable } from '../../components/GroupStandingTable';
+import { BracketView } from '../../components/BracketView';
 
-type ViewMode = 'matches' | 'standings';
+type ViewMode = 'matches' | 'standings' | 'bracket';
 type Filter = 'finished' | 'upcoming' | 'all';
 
 export default function ResultadosScreen() {
@@ -47,7 +48,10 @@ export default function ResultadosScreen() {
             <Text style={[styles.segmentText, view === 'matches' && styles.segmentTextActive]}>Partidos</Text>
           </Pressable>
           <Pressable style={[styles.segment, view === 'standings' && styles.segmentActive]} onPress={() => setView('standings')}>
-            <Text style={[styles.segmentText, view === 'standings' && styles.segmentTextActive]}>Clasificación</Text>
+            <Text style={[styles.segmentText, view === 'standings' && styles.segmentTextActive]}>Grupos</Text>
+          </Pressable>
+          <Pressable style={[styles.segment, view === 'bracket' && styles.segmentActive]} onPress={() => setView('bracket')}>
+            <Text style={[styles.segmentText, view === 'bracket' && styles.segmentTextActive]}>Cuadro</Text>
           </Pressable>
         </View>
 
@@ -68,7 +72,9 @@ export default function ResultadosScreen() {
         )}
       </View>
 
-      {view === 'matches' ? (
+      {view === 'bracket' ? (
+        <BracketView matches={liveMatches} />
+      ) : view === 'matches' ? (
         <SectionList
           sections={sections}
           keyExtractor={(item) => item.id}
