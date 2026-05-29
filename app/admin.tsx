@@ -61,12 +61,23 @@ function AdminMatchRow({ match }: { match: Match }) {
   const [away, setAway] = useState(match.awayScore?.toString() ?? '');
   const [saving, setSaving] = useState(false);
 
+  const [penaltyWinner, setPenaltyWinner] = useState<'home' | 'away' | undefined>(match.penaltyWinner);
+
   const valid = /^\d{1,2}$/.test(home) && /^\d{1,2}$/.test(away);
+  const isKnockout = match.phase !== 'group';
+  const isDraw = valid && parseInt(home, 10) === parseInt(away, 10);
+  // En eliminatoria, un empate necesita ganador de penaltis para poder finalizar
+  const needsPenalty = isKnockout && isDraw;
+  const canFinish = valid && (!needsPenalty || penaltyWinner != null);
 
   const docId = `${match.homeTeam}__${match.awayTeam}`.replace(/\s/g, '_');
 
   async function save(status: 'finished' | 'live') {
     if (!valid) return;
+    if (status === 'finished' && needsPenalty && !penaltyWinner) {
+      Alert.alert('Falta el ganador', 'Es eliminatoria y hay empate: marca quién pasó por penaltis.');
+      return;
+    }
     setSaving(true);
     try {
       await setDoc(doc(db, 'matchResults', docId), {
@@ -75,10 +86,11 @@ function AdminMatchRow({ match }: { match: Match }) {
         homeScore: parseInt(home, 10),
         awayScore: parseInt(away, 10),
         status,
+        penaltyWinner: isDraw ? (penaltyWinner ?? null) : null,
         updatedAt: serverTimestamp(),
         editedByAdmin: true,
       }, { merge: true });
-      Alert.alert('Guardado', `${match.homeTeam} ${home}–${away} ${match.awayTeam} (${status === 'finished' ? 'Finalizado' : 'En vivo'})`);
+      Alert.alert('Guardado', `${match.homeTeam} ${home}–${away} ${match.awayTeam}${isDraw && penaltyWinner ? ` (pen. ${penaltyWinner === 'home' ? match.homeTeam : match.awayTeam})` : ''}`);
     } catch (e) {
       Alert.alert('Error', 'No se pudo guardar el resultado');
     } finally {
@@ -125,11 +137,35 @@ function AdminMatchRow({ match }: { match: Match }) {
         <TextInput style={styles.input} value={away} onChangeText={setAway} keyboardType="number-pad" maxLength={2} placeholder="-" placeholderTextColor={C.textTertiary} selectTextOnFocus />
       </View>
 
+      {needsPenalty && (
+        <View style={styles.penaltyBox}>
+          <Text style={styles.penaltyLabel}>⚽ Empate — ¿quién pasó por penaltis?</Text>
+          <View style={styles.penaltyRow}>
+            <Pressable
+              style={[styles.penaltyBtn, penaltyWinner === 'home' && styles.penaltyBtnActive]}
+              onPress={() => setPenaltyWinner('home')}
+            >
+              <Text style={[styles.penaltyBtnText, penaltyWinner === 'home' && styles.penaltyBtnTextActive]} numberOfLines={1}>
+                {match.homeTeam}
+              </Text>
+            </Pressable>
+            <Pressable
+              style={[styles.penaltyBtn, penaltyWinner === 'away' && styles.penaltyBtnActive]}
+              onPress={() => setPenaltyWinner('away')}
+            >
+              <Text style={[styles.penaltyBtnText, penaltyWinner === 'away' && styles.penaltyBtnTextActive]} numberOfLines={1}>
+                {match.awayTeam}
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      )}
+
       <View style={styles.actions}>
         <Pressable style={[styles.btn, styles.liveBtn, (!valid || saving) && styles.disabled]} onPress={() => save('live')} disabled={!valid || saving}>
           <Text style={styles.liveText}>En vivo</Text>
         </Pressable>
-        <Pressable style={[styles.btn, styles.finBtn, (!valid || saving) && styles.disabled]} onPress={() => save('finished')} disabled={!valid || saving}>
+        <Pressable style={[styles.btn, styles.finBtn, (!canFinish || saving) && styles.disabled]} onPress={() => save('finished')} disabled={!canFinish || saving}>
           {saving ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.finText}>Finalizar</Text>}
         </Pressable>
       </View>
@@ -169,6 +205,13 @@ const styles = StyleSheet.create({
   finBtn: { backgroundColor: C.accent },
   finText: { color: '#fff', fontWeight: '700', fontSize: 14 },
   disabled: { opacity: 0.4 },
+  penaltyBox: { backgroundColor: C.bg, borderRadius: 10, padding: 10, gap: 8 },
+  penaltyLabel: { color: C.textSecondary, fontSize: 12, fontWeight: '600', textAlign: 'center' },
+  penaltyRow: { flexDirection: 'row', gap: 8 },
+  penaltyBtn: { flex: 1, borderRadius: 8, paddingVertical: 8, alignItems: 'center', borderWidth: 1, borderColor: C.border, backgroundColor: C.surface },
+  penaltyBtnActive: { backgroundColor: C.accent, borderColor: C.accent },
+  penaltyBtnText: { color: C.textPrimary, fontSize: 12, fontWeight: '600' },
+  penaltyBtnTextActive: { color: '#fff' },
   currentRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   current: { color: C.textSecondary, fontSize: 12 },
   resetText: { color: C.miss, fontSize: 12, fontWeight: '700' },

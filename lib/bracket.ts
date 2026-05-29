@@ -9,7 +9,10 @@ function winnerOf(match: Match | undefined): string | null {
   if (match.homeScore == null || match.awayScore == null) return null;
   if (match.homeScore > match.awayScore) return match.homeTeam;
   if (match.awayScore > match.homeScore) return match.awayTeam;
-  return null; // empate → penaltis, desconocido por marcador
+  // Empate → lo decide la tanda de penaltis (si el admin la marcó)
+  if (match.penaltyWinner === 'home') return match.homeTeam;
+  if (match.penaltyWinner === 'away') return match.awayTeam;
+  return null; // empate sin penaltis definidos → desconocido
 }
 
 function loserOf(match: Match | undefined): string | null {
@@ -17,6 +20,8 @@ function loserOf(match: Match | undefined): string | null {
   if (match.homeScore == null || match.awayScore == null) return null;
   if (match.homeScore > match.awayScore) return match.awayTeam;
   if (match.awayScore > match.homeScore) return match.homeTeam;
+  if (match.penaltyWinner === 'home') return match.awayTeam;
+  if (match.penaltyWinner === 'away') return match.homeTeam;
   return null;
 }
 

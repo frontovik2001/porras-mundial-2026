@@ -11,6 +11,7 @@ interface MatchResult {
   homeScore: number | null;
   awayScore: number | null;
   status: 'upcoming' | 'live' | 'finished';
+  penaltyWinner?: 'home' | 'away';
 }
 
 /**
@@ -28,6 +29,7 @@ function applyResults(matches: Match[], resultMap: Map<string, MatchResult>): Ma
       status: r.status,
       homeScore: r.homeScore ?? undefined,
       awayScore: r.awayScore ?? undefined,
+      penaltyWinner: r.penaltyWinner,
     };
   });
 }
