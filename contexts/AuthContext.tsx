@@ -1,0 +1,104 @@
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import {
+  User,
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signInWithCredential,
+  GoogleAuthProvider,
+  signOut,
+  updateProfile,
+} from 'firebase/auth';
+import { doc, setDoc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { auth, db } from '../lib/firebase';
+import { UserProfile } from '../types';
+
+interface AuthContextValue {
+  user: User | null;
+  profile: UserProfile | null;
+  loading: boolean;
+  signIn: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string, displayName: string) => Promise<void>;
+  signInWithGoogle: (idToken: string) => Promise<void>;
+  logOut: () => Promise<void>;
+  updateDisplayName: (name: string) => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextValue | null>(null);
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      setUser(firebaseUser);
+      if (firebaseUser) {
+        await ensureUserProfile(firebaseUser);
+        setProfile({
+          uid: firebaseUser.uid,
+          displayName: firebaseUser.displayName ?? 'Usuario',
+          email: firebaseUser.email ?? '',
+          photoURL: firebaseUser.photoURL,
+        });
+      } else {
+        setProfile(null);
+      }
+      setLoading(false);
+    });
+    return unsubscribe;
+  }, []);
+
+  async function ensureUserProfile(firebaseUser: User) {
+    const ref = doc(db, 'users', firebaseUser.uid);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) {
+      await setDoc(ref, {
+        displayName: firebaseUser.displayName ?? 'Usuario',
+        email: firebaseUser.email,
+        photoURL: firebaseUser.photoURL ?? null,
+        createdAt: serverTimestamp(),
+      });
+    }
+  }
+
+  async function signIn(email: string, password: string) {
+    await signInWithEmailAndPassword(auth, email, password);
+  }
+
+  async function signUp(email: string, password: string, displayName: string) {
+    const { user: newUser } = await createUserWithEmailAndPassword(auth, email, password);
+    await updateProfile(newUser, { displayName });
+    await ensureUserProfile({ ...newUser, displayName } as User);
+  }
+
+  async function signInWithGoogle(idToken: string) {
+    const credential = GoogleAuthProvider.credential(idToken);
+    const { user: googleUser } = await signInWithCredential(auth, credential);
+    await ensureUserProfile(googleUser);
+  }
+
+  async function logOut() {
+    await signOut(auth);
+  }
+
+  async function updateDisplayName(name: string) {
+    if (!user) return;
+    await updateProfile(user, { displayName: name });
+    await updateDoc(doc(db, 'users', user.uid), { displayName: name });
+    setProfile((prev) => prev ? { ...prev, displayName: name } : null);
+  }
+
+  return (
+    <AuthContext.Provider value={{ user, profile, loading, signIn, signUp, signInWithGoogle, logOut, updateDisplayName }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth() {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth must be used inside AuthProvider');
+  return ctx;
+}

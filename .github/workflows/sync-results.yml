@@ -1,0 +1,33 @@
+name: Sincronizar resultados Mundial 2026
+
+on:
+  schedule:
+    # Cada 10 minutos entre las 14:00 y las 24:00 UTC (16:00 - 02:00 hora España)
+    # Durante la fase de grupos hay partidos en esas franjas
+    - cron: '*/10 14-23 11 6-7 *'   # Junio 11-30
+    - cron: '*/10 0 12-1 7 *'        # Madrugadas
+    - cron: '*/10 14-23 * 7-8 *'    # Julio (eliminatoria)
+  workflow_dispatch:  # Permite lanzarlo manualmente desde GitHub
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Instalar dependencias
+        run: npm install
+        working-directory: scripts
+
+      - name: Sincronizar resultados
+        run: node sync-results.js
+        working-directory: scripts
+        env:
+          FOOTBALL_API_TOKEN: ${{ secrets.FOOTBALL_API_TOKEN }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
