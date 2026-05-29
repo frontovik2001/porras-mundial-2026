@@ -8,7 +8,7 @@
     "userInterfaceStyle": "light",
     "splash": {
       "resizeMode": "contain",
-      "backgroundColor": "#1a1a2e"
+      "backgroundColor": "#F5F5F7"
     },
     "ios": {
       "supportsTablet": false,
@@ -16,9 +16,10 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#1a1a2e"
+        "backgroundColor": "#F5F5F7"
       },
-      "package": "com.porrasmundial.app"
+      "package": "com.porrasmundial.app",
+      "versionCode": 1
     },
     "web": {
       "bundler": "metro",
