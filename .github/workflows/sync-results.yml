@@ -2,11 +2,10 @@ name: Sincronizar resultados Mundial 2026
 
 on:
   schedule:
-    # Cada 10 minutos entre las 14:00 y las 24:00 UTC (16:00 - 02:00 hora España)
-    # Durante la fase de grupos hay partidos en esas franjas
-    - cron: '*/10 14-23 11 6-7 *'   # Junio 11-30
-    - cron: '*/10 0 12-1 7 *'        # Madrugadas
-    - cron: '*/10 14-23 * 7-8 *'    # Julio (eliminatoria)
+    # Mundial 2026: 11 junio – 19 julio. Cron en horario UTC.
+    # España = UTC+2, así que esto cubre tardes-madrugadas.
+    - cron: '*/10 15-23 * 6,7 *'   # Tardes/noches de junio y julio
+    - cron: '*/10 0-2 * 6,7 *'      # Madrugadas (partidos en USA)
   workflow_dispatch:  # Permite lanzarlo manualmente desde GitHub
 
 jobs:
