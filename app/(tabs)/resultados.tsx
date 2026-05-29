@@ -1,17 +1,21 @@
 import React, { useMemo, useState } from 'react';
 import {
-  View, Text, SectionList, StyleSheet, Pressable,
+  View, Text, SectionList, FlatList, StyleSheet, Pressable,
 } from 'react-native';
-import { PHASE_LABELS } from '../../constants/matches';
+import { PHASE_LABELS, GROUPS } from '../../constants/matches';
 import { useMatchResults } from '../../hooks/useMatchResults';
 import { FLAG } from '../../constants/flags';
 import { Match } from '../../types';
 import { C, SHADOW } from '../../constants/theme';
+import { computeAllStandings } from '../../lib/standings';
+import { GroupStandingTable } from '../../components/GroupStandingTable';
 
+type ViewMode = 'matches' | 'standings';
 type Filter = 'finished' | 'upcoming' | 'all';
 
 export default function ResultadosScreen() {
   const liveMatches = useMatchResults();
+  const [view, setView] = useState<ViewMode>('matches');
   const [filter, setFilter] = useState<Filter>('upcoming');
 
   const sections = useMemo(() => {
@@ -28,45 +32,77 @@ export default function ResultadosScreen() {
       byPhase.get(key)!.push(match);
     }
     return Array.from(byPhase.entries()).map(([title, data]) => ({ title, data }));
-  }, [filter]);
+  }, [filter, liveMatches]);
+
+  const standings = useMemo(() => computeAllStandings(liveMatches), [liveMatches]);
+  const groupLetters = Object.keys(GROUPS);
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Resultados</Text>
-        <View style={styles.filters}>
-          {(['upcoming', 'finished', 'all'] as Filter[]).map((f) => (
-            <Pressable
-              key={f}
-              style={[styles.chip, filter === f && styles.chipActive]}
-              onPress={() => setFilter(f)}
-            >
-              <Text style={[styles.chipText, filter === f && styles.chipTextActive]}>
-                {f === 'upcoming' ? 'Próximos' : f === 'finished' ? 'Finalizados' : 'Todos'}
-              </Text>
-            </Pressable>
-          ))}
+
+        <View style={styles.segmented}>
+          <Pressable style={[styles.segment, view === 'matches' && styles.segmentActive]} onPress={() => setView('matches')}>
+            <Text style={[styles.segmentText, view === 'matches' && styles.segmentTextActive]}>Partidos</Text>
+          </Pressable>
+          <Pressable style={[styles.segment, view === 'standings' && styles.segmentActive]} onPress={() => setView('standings')}>
+            <Text style={[styles.segmentText, view === 'standings' && styles.segmentTextActive]}>Clasificación</Text>
+          </Pressable>
         </View>
+
+        {view === 'matches' && (
+          <View style={styles.filters}>
+            {(['upcoming', 'finished', 'all'] as Filter[]).map((f) => (
+              <Pressable
+                key={f}
+                style={[styles.chip, filter === f && styles.chipActive]}
+                onPress={() => setFilter(f)}
+              >
+                <Text style={[styles.chipText, filter === f && styles.chipTextActive]}>
+                  {f === 'upcoming' ? 'Próximos' : f === 'finished' ? 'Finalizados' : 'Todos'}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        )}
       </View>
 
-      <SectionList
-        sections={sections}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.list}
-        stickySectionHeadersEnabled={false}
-        renderSectionHeader={({ section: { title } }) => (
-          <Text style={styles.sectionTitle}>{title}</Text>
-        )}
-        renderItem={({ item }) => <ResultCard match={item} />}
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <Text style={styles.emptyEmoji}>{filter === 'finished' ? '⏳' : '📅'}</Text>
-            <Text style={styles.emptyText}>
-              {filter === 'finished' ? 'Todavía no hay partidos finalizados' : 'No hay partidos próximos'}
-            </Text>
-          </View>
-        }
-      />
+      {view === 'matches' ? (
+        <SectionList
+          sections={sections}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.list}
+          stickySectionHeadersEnabled={false}
+          renderSectionHeader={({ section: { title } }) => (
+            <Text style={styles.sectionTitle}>{title}</Text>
+          )}
+          renderItem={({ item }) => <ResultCard match={item} />}
+          ListEmptyComponent={
+            <View style={styles.empty}>
+              <Text style={styles.emptyEmoji}>{filter === 'finished' ? '⏳' : '📅'}</Text>
+              <Text style={styles.emptyText}>
+                {filter === 'finished' ? 'Todavía no hay partidos finalizados' : 'No hay partidos próximos'}
+              </Text>
+            </View>
+          }
+        />
+      ) : (
+        <FlatList
+          data={groupLetters}
+          keyExtractor={(g) => g}
+          contentContainerStyle={styles.list}
+          ListHeaderComponent={
+            <View style={styles.legend}>
+              <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: C.exact }]} /><Text style={styles.legendText}>Clasifica (1º-2º)</Text></View>
+              <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: C.result }]} /><Text style={styles.legendText}>Posible mejor 3º</Text></View>
+            </View>
+          }
+          renderItem={({ item }) => (
+            <GroupStandingTable groupLetter={item} standings={standings.byGroup[item]} />
+          )}
+        />
+      )}
     </View>
   );
 }
@@ -125,6 +161,15 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
   header: { paddingHorizontal: 20, paddingTop: 56, paddingBottom: 12, gap: 12 },
   title: { color: C.textPrimary, fontSize: 28, fontWeight: '800' },
+  segmented: { flexDirection: 'row', backgroundColor: C.surfaceAlt, borderRadius: 12, padding: 4, gap: 4 },
+  segment: { flex: 1, paddingVertical: 9, borderRadius: 9, alignItems: 'center' },
+  segmentActive: { backgroundColor: C.surface, ...SHADOW },
+  segmentText: { color: C.textSecondary, fontSize: 14, fontWeight: '600' },
+  segmentTextActive: { color: C.accent, fontWeight: '700' },
+  legend: { flexDirection: 'row', gap: 16, paddingVertical: 8, paddingHorizontal: 4 },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  legendDot: { width: 4, height: 14, borderRadius: 2 },
+  legendText: { color: C.textSecondary, fontSize: 12 },
   filters: { flexDirection: 'row', gap: 8 },
   chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border },
   chipActive: { backgroundColor: C.accent, borderColor: C.accent },
