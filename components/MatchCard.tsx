@@ -3,6 +3,7 @@ import { View, Text, Pressable, StyleSheet, TextInput, ActivityIndicator } from 
 import { Match, Prediction } from '../types';
 import { Flag } from './Flag';
 import { T } from '../constants/theme';
+import { calculatePoints } from '../lib/scoring';
 
 interface Props {
   match: Match;
@@ -22,8 +23,11 @@ export function MatchCard({ match, prediction, onSave, readOnly = false }: Props
   const isLive     = match.status === 'live';
   const teamsKnown = match.homeTeam !== 'Por definir' && match.awayTeam !== 'Por definir';
   const isPredictable = isUpcoming && teamsKnown && !readOnly;
-  const hasPred    = prediction != null;
-  const pts        = prediction?.points;
+  const hasPred = prediction != null;
+  // Calcular puntos en tiempo real desde el resultado actual, no del campo almacenado
+  const pts = isFinished && hasPred && match.homeScore !== undefined && match.awayScore !== undefined
+    ? calculatePoints(prediction!, match as Pick<Match, 'homeScore' | 'awayScore'>)
+    : prediction?.points;
 
   function handlePress() {
     if (!isPredictable) return;
@@ -108,6 +112,15 @@ export function MatchCard({ match, prediction, onSave, readOnly = false }: Props
         </View>
       </View>
 
+      {/* Resultado final + puntos */}
+      {isFinished && hasPred && (
+        <View style={styles.resultRow}>
+          <Text style={styles.resultInfo}>
+            Resultado final: {match.homeScore}–{match.awayScore}
+          </Text>
+        </View>
+      )}
+
       {/* Input inline */}
       {expanded && isPredictable && (
         <View style={styles.inputRow}>
@@ -185,6 +198,8 @@ const styles = StyleSheet.create({
   missBadge:   { backgroundColor: T.color.line, borderRadius: T.radius.chip, paddingHorizontal: 10, paddingVertical: 4 },
   missText:    { color: T.color.ink3, fontSize: 12, fontFamily: 'HankenGrotesk_700Bold' },
   pendingText: { color: T.color.ink3, fontSize: 11, fontFamily: 'HankenGrotesk_400Regular', fontStyle: 'italic' },
+  resultRow:   { borderTopWidth: 1, borderTopColor: T.color.line, paddingTop: 6 },
+  resultInfo:  { color: T.color.ink3, fontSize: 12, fontFamily: 'HankenGrotesk_500Medium' },
   inputRow:    { flexDirection: 'row', alignItems: 'center', gap: 8, paddingTop: 12, borderTopWidth: 1, borderTopColor: T.color.line },
   input: {
     width: 52, height: 48,

@@ -1,16 +1,17 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View, Text, StyleSheet, SectionList, TextInput,
   Pressable, ActivityIndicator, Alert,
 } from 'react-native';
 import { Redirect } from 'expo-router';
-import { doc, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, deleteDoc, serverTimestamp, collection, query, where, getDocs, writeBatch } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { useMatchResults } from '../hooks/useMatchResults';
 import { isAdmin } from '../constants/admin';
-import { PHASE_LABELS } from '../constants/matches';
+import { PHASE_LABELS, ALL_MATCHES } from '../constants/matches';
 import { FLAG } from '../constants/flags';
+import { calculatePoints } from '../lib/scoring';
 import { Match } from '../types';
 import { C, SHADOW } from '../constants/theme';
 
@@ -60,8 +61,14 @@ function AdminMatchRow({ match }: { match: Match }) {
   const [home, setHome] = useState(match.homeScore?.toString() ?? '');
   const [away, setAway] = useState(match.awayScore?.toString() ?? '');
   const [saving, setSaving] = useState(false);
-
   const [penaltyWinner, setPenaltyWinner] = useState<'home' | 'away' | undefined>(match.penaltyWinner);
+
+  // Sincronizar inputs cuando llegan los datos de Firestore
+  useEffect(() => {
+    if (match.homeScore !== undefined) setHome(match.homeScore.toString());
+    if (match.awayScore !== undefined) setAway(match.awayScore.toString());
+    setPenaltyWinner(match.penaltyWinner);
+  }, [match.homeScore, match.awayScore, match.penaltyWinner]);
 
   const valid = /^\d{1,2}$/.test(home) && /^\d{1,2}$/.test(away);
   const isKnockout = match.phase !== 'group';
@@ -79,17 +86,44 @@ function AdminMatchRow({ match }: { match: Match }) {
       return;
     }
     setSaving(true);
+    const homeScoreInt = parseInt(home, 10);
+    const awayScoreInt = parseInt(away, 10);
     try {
       await setDoc(doc(db, 'matchResults', docId), {
         homeTeam: match.homeTeam,
         awayTeam: match.awayTeam,
-        homeScore: parseInt(home, 10),
-        awayScore: parseInt(away, 10),
+        homeScore: homeScoreInt,
+        awayScore: awayScoreInt,
         status,
         penaltyWinner: isDraw ? (penaltyWinner ?? null) : null,
         updatedAt: serverTimestamp(),
         editedByAdmin: true,
       }, { merge: true });
+
+      // Si el partido finaliza, recalcular puntos de todas las predicciones
+      if (status === 'finished') {
+        const matchObj = ALL_MATCHES.find(
+          (m) => m.homeTeam === match.homeTeam && m.awayTeam === match.awayTeam
+        );
+        if (matchObj) {
+          const predsSnap = await getDocs(
+            query(collection(db, 'predictions'), where('matchId', '==', matchObj.id))
+          );
+          if (!predsSnap.empty) {
+            const batch = writeBatch(db);
+            predsSnap.docs.forEach((d) => {
+              const pred = d.data();
+              const points = calculatePoints(
+                { homeScore: pred.homeScore, awayScore: pred.awayScore },
+                { homeScore: homeScoreInt, awayScore: awayScoreInt }
+              );
+              batch.update(d.ref, { points });
+            });
+            await batch.commit();
+          }
+        }
+      }
+
       Alert.alert('Guardado', `${match.homeTeam} ${home}–${away} ${match.awayTeam}${isDraw && penaltyWinner ? ` (pen. ${penaltyWinner === 'home' ? match.homeTeam : match.awayTeam})` : ''}`);
     } catch (e) {
       Alert.alert('Error', 'No se pudo guardar el resultado');

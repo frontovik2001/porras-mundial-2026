@@ -1,9 +1,10 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View, Text, SectionList, StyleSheet, Pressable,
   Modal, FlatList, ActivityIndicator,
 } from 'react-native';
 import { getDocs, doc, getDoc } from 'firebase/firestore';
+import { useFocusEffect } from 'expo-router';
 import { db } from '../../lib/firebase';
 import { MatchCard } from '../../components/MatchCard';
 import { usePredictions } from '../../hooks/usePredictions';
@@ -25,6 +26,7 @@ const FILTERS: { key: PhaseFilter; label: string }[] = [
 ];
 
 interface Member { uid: string; displayName: string }
+interface GroupSection { groupId: string; groupName: string; members: Member[] }
 
 export default function PrediccionesScreen() {
   const { user } = useAuth();
@@ -34,31 +36,46 @@ export default function PrediccionesScreen() {
   const [filter, setFilter] = useState<PhaseFilter>('group');
 
   // Selector de usuario
-  const [members, setMembers]           = useState<Member[]>([]);
-  const [selectedUid, setSelectedUid]   = useState<string | null>(null); // null = yo
-  const [modalVisible, setModalVisible] = useState(false);
+  const [groupSections, setGroupSections] = useState<GroupSection[]>([]);
+  const [selectedUid, setSelectedUid]     = useState<string | null>(null); // null = yo
+  const [modalVisible, setModalVisible]   = useState(false);
   const [loadingMembers, setLoadingMembers] = useState(false);
 
   const { getPrediction: getOtherPred, loading: loadingOther } = useUserPredictions(selectedUid);
 
-  // Cargar miembros únicos de todos los grupos
-  useEffect(() => {
+  // Cargar miembros agrupados por grupo (se recarga al volver a la pestaña)
+  useFocusEffect(useCallback(() => {
     if (!groups.length || !user) return;
-    const uids = [...new Set(groups.flatMap((g) => g.members).filter((uid) => uid !== user.uid))];
-    if (!uids.length) return;
     setLoadingMembers(true);
-    Promise.all(uids.map((uid) => getDoc(doc(db, 'users', uid)))).then((docs) => {
-      setMembers(
-        docs
-          .filter((d) => d.exists())
-          .map((d) => ({ uid: d.id, displayName: (d.data() as UserProfile).displayName }))
+
+    const otherGroups = groups.filter((g) => g.members.some((uid) => uid !== user.uid));
+    const allUids = [...new Set(otherGroups.flatMap((g) => g.members).filter((uid) => uid !== user.uid))];
+    if (!allUids.length) { setLoadingMembers(false); return; }
+
+    Promise.all(allUids.map((uid) => getDoc(doc(db, 'users', uid)))).then((docs) => {
+      const profileMap: Record<string, string> = {};
+      docs.filter((d) => d.exists()).forEach((d) => {
+        profileMap[d.id] = (d.data() as UserProfile).displayName;
+      });
+
+      setGroupSections(
+        otherGroups.map((g) => ({
+          groupId: g.id,
+          groupName: g.name,
+          members: g.members
+            .filter((uid) => uid !== user.uid && profileMap[uid])
+            .map((uid) => ({ uid, displayName: profileMap[uid] })),
+        })).filter((s) => s.members.length > 0)
       );
       setLoadingMembers(false);
     });
-  }, [groups, user]);
+  }, [groups, user]));
 
-  const viewingOther  = selectedUid !== null;
-  const selectedName  = members.find((m) => m.uid === selectedUid)?.displayName ?? 'Yo';
+  const viewingOther   = selectedUid !== null;
+  const allMembers     = groupSections.flatMap((s) => s.members);
+  const hasMembers     = groupSections.length > 0;
+  const selectedName   = allMembers.find((m) => m.uid === selectedUid)?.displayName ?? 'Yo';
+  const selectedGroup  = groupSections.find((s) => s.members.some((m) => m.uid === selectedUid))?.groupName;
   const activePred    = viewingOther ? getOtherPred : getPrediction;
 
   const sections = useMemo(() => {
@@ -84,17 +101,22 @@ export default function PrediccionesScreen() {
         <Text style={styles.title}>Predicciones</Text>
 
         {/* Selector de usuario */}
-        {members.length > 0 && (
+        {hasMembers && (
           <Pressable style={styles.userSelector} onPress={() => setModalVisible(true)}>
             <View style={styles.userSelectorLeft}>
-              <View style={styles.avatarSmall}>
-                <Text style={styles.avatarSmallText}>
+              <View style={[styles.avatarSmall, viewingOther && { backgroundColor: T.color.line }]}>
+                <Text style={[styles.avatarSmallText, viewingOther && { color: T.color.ink }]}>
                   {viewingOther ? selectedName.charAt(0).toUpperCase() : (user?.displayName ?? '?').charAt(0).toUpperCase()}
                 </Text>
               </View>
-              <Text style={styles.userSelectorLabel}>
-                {viewingOther ? selectedName : 'Mis predicciones'}
-              </Text>
+              <View>
+                <Text style={styles.userSelectorLabel}>
+                  {viewingOther ? selectedName : 'Mis predicciones'}
+                </Text>
+                {viewingOther && selectedGroup && (
+                  <Text style={styles.userSelectorGroup}>{selectedGroup}</Text>
+                )}
+              </View>
             </View>
             <Ionicons name="chevron-down" size={16} color={T.color.ink3} />
           </Pressable>
@@ -167,19 +189,25 @@ export default function PrediccionesScreen() {
               <ActivityIndicator color={T.color.accent} style={{ marginVertical: 20 }} />
             ) : (
               <FlatList
-                data={members}
-                keyExtractor={(m) => m.uid}
-                renderItem={({ item }) => (
-                  <Pressable
-                    style={[styles.memberRow, selectedUid === item.uid && styles.memberRowActive]}
-                    onPress={() => { setSelectedUid(item.uid); setModalVisible(false); }}
-                  >
-                    <View style={styles.memberAvatar}>
-                      <Text style={styles.memberAvatarText}>{item.displayName.charAt(0).toUpperCase()}</Text>
-                    </View>
-                    <Text style={styles.memberName}>{item.displayName}</Text>
-                    {selectedUid === item.uid && <Ionicons name="checkmark" size={18} color={T.color.accent} />}
-                  </Pressable>
+                data={groupSections}
+                keyExtractor={(s) => s.groupId}
+                renderItem={({ item: section }) => (
+                  <View>
+                    <Text style={styles.groupHeader}>{section.groupName}</Text>
+                    {section.members.map((m) => (
+                      <Pressable
+                        key={m.uid}
+                        style={styles.memberRow}
+                        onPress={() => { setSelectedUid(m.uid); setModalVisible(false); }}
+                      >
+                        <View style={styles.memberAvatar}>
+                          <Text style={styles.memberAvatarText}>{m.displayName.charAt(0).toUpperCase()}</Text>
+                        </View>
+                        <Text style={styles.memberName}>{m.displayName}</Text>
+                        {selectedUid === m.uid && <Ionicons name="checkmark" size={18} color={T.color.accent} />}
+                      </Pressable>
+                    ))}
+                  </View>
                 )}
               />
             )}
@@ -219,6 +247,7 @@ const styles = StyleSheet.create({
   avatarSmall:      { width: 24, height: 24, borderRadius: 12, backgroundColor: T.color.soft, alignItems: 'center', justifyContent: 'center' },
   avatarSmallText:  { color: T.color.accent, fontSize: 12, fontFamily: 'SchibstedGrotesk_700Bold' },
   userSelectorLabel:{ color: T.color.ink, fontSize: 13, fontFamily: 'HankenGrotesk_700Bold' },
+  userSelectorGroup:{ color: T.color.ink3, fontSize: 11, fontFamily: 'HankenGrotesk_400Regular' },
 
   // Filtros
   filters: { flexDirection: 'row', gap: T.space.sm },
@@ -234,12 +263,13 @@ const styles = StyleSheet.create({
 
   // Modal
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
-  modalSheet:   { backgroundColor: T.color.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: T.space.xl, paddingTop: T.space.md, paddingBottom: 40 },
+  modalSheet:   { backgroundColor: T.color.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: T.space.xl, paddingTop: T.space.md, paddingBottom: 40, maxHeight: '75%' },
   modalHandle:  { width: 40, height: 4, borderRadius: 2, backgroundColor: T.color.line, alignSelf: 'center', marginBottom: T.space.lg },
   modalTitle:   { color: T.color.ink, fontSize: 17, fontFamily: 'SchibstedGrotesk_700Bold', marginBottom: T.space.sm },
   memberRow:    { flexDirection: 'row', alignItems: 'center', gap: T.space.md, paddingVertical: T.space.sm, borderRadius: 12 },
   memberRowActive: { },
   memberAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: T.color.line, alignItems: 'center', justifyContent: 'center' },
   memberAvatarText: { color: T.color.ink, fontSize: 17, fontFamily: 'SchibstedGrotesk_700Bold' },
+  groupHeader:  { color: T.color.ink, fontSize: 13, fontFamily: 'HankenGrotesk_700Bold', textTransform: 'uppercase', letterSpacing: 0.8, paddingVertical: T.space.sm, borderBottomWidth: 1, borderBottomColor: T.color.line, marginBottom: 4 },
   memberName:   { flex: 1, color: T.color.ink, fontSize: 15, fontFamily: 'HankenGrotesk_700Bold' },
 });

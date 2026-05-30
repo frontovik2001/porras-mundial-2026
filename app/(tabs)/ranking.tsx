@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, ActivityIndicator, Pressable } from 'react-native';
+import { useFocusEffect } from 'expo-router';
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useGroups } from '../../hooks/useGroup';
@@ -24,7 +25,7 @@ export default function RankingScreen() {
     if (groups.length > 0 && !selectedGroup) setSelectedGroup(groups[0]);
   }, [groups]);
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     if (!selectedGroup) return;
     setLoadingRanking(true);
     async function load() {
@@ -44,7 +45,7 @@ export default function RankingScreen() {
       setLoadingRanking(false);
     }
     load();
-  }, [selectedGroup]);
+  }, [selectedGroup]));
 
   if (groupsLoading) {
     return <View style={styles.center}><ActivityIndicator color={T.color.accent} size="large" /></View>;

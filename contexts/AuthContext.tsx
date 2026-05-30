@@ -70,7 +70,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   async function signUp(email: string, password: string, displayName: string) {
     const { user: newUser } = await createUserWithEmailAndPassword(auth, email, password);
     await updateProfile(newUser, { displayName });
-    await ensureUserProfile({ ...newUser, displayName } as User);
+    // Forzamos el displayName correcto en Firestore con merge:true para evitar
+    // la race condition con onAuthStateChanged que puede guardar 'Usuario' antes
+    await setDoc(doc(db, 'users', newUser.uid), {
+      displayName,
+      email: newUser.email,
+      photoURL: newUser.photoURL ?? null,
+      createdAt: serverTimestamp(),
+    }, { merge: true });
   }
 
   async function signInWithGoogle(idToken: string) {

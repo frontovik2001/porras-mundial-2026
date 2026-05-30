@@ -11,7 +11,7 @@ import {
   getDocs,
   serverTimestamp,
 } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { db, auth } from '../lib/firebase';
 import { Group } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { MAX_GROUP_MEMBERS } from '../constants/admin';
@@ -62,7 +62,10 @@ export function useGroups() {
 
   const joinGroup = useCallback(
     async (code: string): Promise<Group> => {
-      if (!user) throw new Error('Not authenticated');
+      // Usar auth.currentUser para capturar el usuario recién registrado
+      // antes de que el estado del hook se haya actualizado
+      const uid = (auth.currentUser ?? user)?.uid;
+      if (!uid) throw new Error('Not authenticated');
 
       const q = query(collection(db, 'groups'), where('code', '==', code.toUpperCase()));
       const snap = await getDocs(q);
@@ -72,14 +75,14 @@ export function useGroups() {
       const groupDoc = snap.docs[0];
       const group = { id: groupDoc.id, ...groupDoc.data() } as Group;
 
-      if (group.members.includes(user.uid)) throw new Error('Ya eres miembro de este grupo');
+      if (group.members.includes(uid)) throw new Error('Ya eres miembro de este grupo');
 
       if (group.members.length >= MAX_GROUP_MEMBERS) {
         throw new Error(`El grupo está completo (máximo ${MAX_GROUP_MEMBERS} miembros)`);
       }
 
       await updateDoc(doc(db, 'groups', group.id), {
-        members: arrayUnion(user.uid),
+        members: arrayUnion(uid),
       });
 
       return group;

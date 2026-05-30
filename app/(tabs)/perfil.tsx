@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Alert, TextInput, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Alert, TextInput, ActivityIndicator, ScrollView } from 'react-native';
 import { router } from 'expo-router';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePredictions } from '../../hooks/usePredictions';
@@ -48,6 +48,7 @@ export default function PerfilScreen() {
 
   return (
     <View style={styles.container}>
+    <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>Perfil</Text>
@@ -121,12 +122,14 @@ export default function PerfilScreen() {
       <Pressable style={styles.logoutBtn} onPress={handleLogout}>
         <Text style={styles.logoutText}>Cerrar sesión</Text>
       </Pressable>
+    </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: T.color.bg },
+  scroll: { paddingBottom: 40 },
   header:    { paddingHorizontal: T.space.xl, paddingTop: 56, paddingBottom: T.space.xl, gap: T.space.lg, backgroundColor: T.color.bg },
   title:     { color: T.color.ink, fontSize: 27, fontFamily: 'SchibstedGrotesk_800ExtraBold' },
   avatarRow: { flexDirection: 'row', alignItems: 'center', gap: T.space.md },
