@@ -7,6 +7,7 @@ import { router } from 'expo-router';
 import { useAuth } from '../../contexts/AuthContext';
 import { useGroups } from '../../hooks/useGroup';
 import { C } from '../../constants/theme';
+import { GradientButton } from '../../components/GradientButton';
 
 export default function RegisterScreen() {
   const { signUp } = useAuth();
@@ -88,9 +89,7 @@ export default function RegisterScreen() {
           {error ? <Text style={styles.error}>{error}</Text> : null}
           {notice ? <Text style={styles.notice}>{notice}</Text> : null}
 
-          <Pressable style={[styles.btn, loading && styles.btnDisabled]} onPress={handleRegister} disabled={loading}>
-            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Crear cuenta</Text>}
-          </Pressable>
+          <GradientButton label="Crear cuenta" onPress={handleRegister} loading={loading} variant="green" style={{ marginTop: 4 }} />
         </View>
 
         <Pressable onPress={() => router.back()} style={styles.back}>

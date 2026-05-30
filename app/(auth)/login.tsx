@@ -8,6 +8,7 @@ import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 import { useAuth } from '../../contexts/AuthContext';
 import { C } from '../../constants/theme';
+import { GradientButton } from '../../components/GradientButton';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -66,9 +67,7 @@ export default function LoginScreen() {
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
-          <Pressable style={[styles.btn, loading && styles.btnDisabled]} onPress={handleLogin} disabled={loading}>
-            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Entrar</Text>}
-          </Pressable>
+          <GradientButton label="Entrar" onPress={handleLogin} loading={loading} variant="green" style={{ marginTop: 4 }} />
 
           <View style={styles.divider}>
             <View style={styles.line} />
