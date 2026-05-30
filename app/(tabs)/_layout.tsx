@@ -5,7 +5,7 @@ import { T } from '../../constants/theme';
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
 const TABS: { name: string; label: string; icon: IconName; iconActive: IconName }[] = [
-  { name: 'index',     label: 'Partidos',   icon: 'football-outline',     iconActive: 'football' },
+  { name: 'index',     label: 'Predicciones', icon: 'football-outline',     iconActive: 'football' },
   { name: 'resultados',label: 'Resultados', icon: 'stats-chart-outline',  iconActive: 'stats-chart' },
   { name: 'grupos',    label: 'Grupos',     icon: 'people-outline',       iconActive: 'people' },
   { name: 'ranking',   label: 'Ranking',    icon: 'trophy-outline',       iconActive: 'trophy' },

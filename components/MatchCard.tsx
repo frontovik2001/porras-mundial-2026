@@ -8,9 +8,10 @@ interface Props {
   match: Match;
   prediction?: Prediction;
   onSave: (matchId: string, home: number, away: number) => Promise<void>;
+  readOnly?: boolean;
 }
 
-export function MatchCard({ match, prediction, onSave }: Props) {
+export function MatchCard({ match, prediction, onSave, readOnly = false }: Props) {
   const [expanded, setExpanded] = useState(false);
   const [homeInput, setHomeInput] = useState(prediction?.homeScore?.toString() ?? '');
   const [awayInput, setAwayInput] = useState(prediction?.awayScore?.toString() ?? '');
@@ -20,7 +21,7 @@ export function MatchCard({ match, prediction, onSave }: Props) {
   const isFinished = match.status === 'finished';
   const isLive     = match.status === 'live';
   const teamsKnown = match.homeTeam !== 'Por definir' && match.awayTeam !== 'Por definir';
-  const isPredictable = isUpcoming && teamsKnown;
+  const isPredictable = isUpcoming && teamsKnown && !readOnly;
   const hasPred    = prediction != null;
   const pts        = prediction?.points;
 
