@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
     borderColor: C.border,
   },
   error: { color: C.miss, fontSize: 13, textAlign: 'center' },
-  btn: { backgroundColor: C.accent, borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
+  btn: { backgroundColor: C.green, borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
   btnDisabled: { opacity: 0.5 },
   btnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
   divider: { flexDirection: 'row', alignItems: 'center', gap: 12 },

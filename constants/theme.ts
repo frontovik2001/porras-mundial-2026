@@ -27,6 +27,14 @@ export const C = {
   tabActive: '#1D4ED8',
   tabInactive: '#ABABAB',
   tabBg: '#FFFFFF',
+
+  // Podio (top 3)
+  gold: '#F59E0B',
+  goldDark: '#B45309',
+  silver: '#64748B',
+  silverDark: '#475569',
+  bronze: '#C2784B',
+  bronzeDark: '#8A4B2A',
 };
 
 export const SHADOW = {

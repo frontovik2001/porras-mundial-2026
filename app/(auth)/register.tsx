@@ -131,7 +131,7 @@ const styles = StyleSheet.create({
   codeHint: { color: C.textTertiary, fontSize: 12, marginTop: -4 },
   error: { color: C.miss, fontSize: 13, textAlign: 'center' },
   notice: { color: C.result, fontSize: 13, textAlign: 'center', lineHeight: 18 },
-  btn: { backgroundColor: C.accent, borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginTop: 4 },
+  btn: { backgroundColor: C.green, borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginTop: 4 },
   btnDisabled: { opacity: 0.5 },
   btnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
   back: { alignItems: 'center' },

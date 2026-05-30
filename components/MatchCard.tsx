@@ -286,7 +286,7 @@ const styles = StyleSheet.create({
   },
   saveBtn: {
     flex: 1,
-    backgroundColor: C.accent,
+    backgroundColor: C.green,
     borderRadius: 12,
     height: 48,
     alignItems: 'center',

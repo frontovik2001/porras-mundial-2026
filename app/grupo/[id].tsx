@@ -7,6 +7,7 @@ import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firesto
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../contexts/AuthContext';
 import { RankingItem } from '../../components/RankingItem';
+import { Podium } from '../../components/Podium';
 import { buildRanking } from '../../lib/scoring';
 import { ALL_MATCHES } from '../../constants/matches';
 import { Group, Prediction, RankingEntry, UserProfile } from '../../types';
@@ -83,12 +84,17 @@ export default function GrupoDetailScreen() {
         </View>
       ) : (
         <FlatList
-          data={ranking}
+          data={ranking.slice(3)}
           keyExtractor={(r) => r.userId}
           contentContainerStyle={styles.list}
-          ListHeaderComponent={<Text style={styles.sectionTitle}>Clasificación</Text>}
+          ListHeaderComponent={
+            <>
+              <Text style={styles.sectionTitle}>Clasificación</Text>
+              {ranking.length > 0 && <Podium top3={ranking.slice(0, 3)} currentUserId={user?.uid} />}
+            </>
+          }
           renderItem={({ item, index }) => (
-            <RankingItem entry={item} position={index + 1} isCurrentUser={item.userId === user?.uid} />
+            <RankingItem entry={item} position={index + 4} isCurrentUser={item.userId === user?.uid} />
           )}
         />
       )}

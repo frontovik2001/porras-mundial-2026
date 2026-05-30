@@ -69,7 +69,7 @@ const styles = StyleSheet.create({
     borderColor: C.border,
   },
   error: { color: C.miss, fontSize: 13 },
-  btn: { backgroundColor: C.accent, borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
+  btn: { backgroundColor: C.green, borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
   btnDisabled: { opacity: 0.5 },
   btnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 });
