@@ -33,9 +33,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      setUser(firebaseUser);
       if (firebaseUser) {
+        // Comprobar si el usuario está baneado
+        const snap = await getDoc(doc(db, 'users', firebaseUser.uid));
+        if (snap.exists() && (snap.data() as any).banned) {
+          await signOut(auth);
+          setUser(null);
+          setProfile(null);
+          setLoading(false);
+          return;
+        }
         await ensureUserProfile(firebaseUser);
+        setUser(firebaseUser);
         setProfile({
           uid: firebaseUser.uid,
           displayName: firebaseUser.displayName ?? 'Usuario',
@@ -43,6 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           photoURL: firebaseUser.photoURL,
         });
       } else {
+        setUser(null);
         setProfile(null);
       }
       setLoading(false);

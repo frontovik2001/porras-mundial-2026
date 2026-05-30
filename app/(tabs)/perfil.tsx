@@ -3,26 +3,32 @@ import { View, Text, Pressable, StyleSheet, Alert, TextInput, ActivityIndicator,
 import { router } from 'expo-router';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePredictions } from '../../hooks/usePredictions';
-import { ALL_MATCHES } from '../../constants/matches';
+import { useMatchResults } from '../../hooks/useMatchResults';
+import { calculatePoints } from '../../lib/scoring';
 import { isAdmin } from '../../constants/admin';
 import { T } from '../../constants/theme';
 
 export default function PerfilScreen() {
   const { user, profile, logOut, updateDisplayName } = useAuth();
   const { predictions } = usePredictions();
+  const liveMatches = useMatchResults();
   const admin = isAdmin(user?.uid);
 
   const [editingName, setEditingName] = useState(false);
   const [newName, setNewName] = useState(profile?.displayName ?? '');
   const [savingName, setSavingName] = useState(false);
 
-  const finishedMatches = ALL_MATCHES.filter((m) => m.status === 'finished');
-  const myPredictionsOnFinished = predictions.filter((p) =>
-    finishedMatches.some((m) => m.id === p.matchId)
+  const finishedMatchMap = new Map(
+    liveMatches.filter((m) => m.status === 'finished').map((m) => [m.id, m])
   );
-  const totalPoints = myPredictionsOnFinished.reduce((acc, p) => acc + (p.points ?? 0), 0);
-  const exactHits   = myPredictionsOnFinished.filter((p) => p.points === 5).length;
-  const resultHits  = myPredictionsOnFinished.filter((p) => p.points === 2).length;
+  const myPredictionsOnFinished = predictions.filter((p) => finishedMatchMap.has(p.matchId));
+  const livePoints = myPredictionsOnFinished.map((p) => {
+    const match = finishedMatchMap.get(p.matchId)!;
+    return calculatePoints(p, match);
+  });
+  const totalPoints = livePoints.reduce((acc, pts) => acc + pts, 0);
+  const exactHits   = livePoints.filter((pts) => pts === 5).length;
+  const resultHits  = livePoints.filter((pts) => pts === 2).length;
 
   async function handleSaveName() {
     if (!newName.trim()) return;

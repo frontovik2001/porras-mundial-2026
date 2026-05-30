@@ -8,23 +8,32 @@ import { useAuth } from '../../contexts/AuthContext';
 import { RankingItem } from '../../components/RankingItem';
 import { Podium } from '../../components/Podium';
 import { buildRanking } from '../../lib/scoring';
-import { ALL_MATCHES } from '../../constants/matches';
 import { Group, Prediction, RankingEntry, UserProfile } from '../../types';
 import { T } from '../../constants/theme';
+import { useMatchResults } from '../../hooks/useMatchResults';
 
 export default function RankingScreen() {
   const { user } = useAuth();
   const { groups, loading: groupsLoading } = useGroups();
+  const liveMatches = useMatchResults();
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
-  const [ranking, setRanking] = useState<RankingEntry[]>([]);
   const [loadingRanking, setLoadingRanking] = useState(false);
+  const [members, setMembers] = useState<{ userId: string; displayName: string; photoURL: string | null }[]>([]);
+  const [predictions, setPredictions] = useState<Prediction[]>([]);
 
-  const finishedMatches = useMemo(() => ALL_MATCHES.filter((m) => m.status === 'finished'), []);
+  const finishedMatches = useMemo(() => liveMatches.filter((m) => m.status === 'finished'), [liveMatches]);
+
+  // Ranking calculado en tiempo real cada vez que cambian partidos o predicciones
+  const ranking = useMemo(
+    () => buildRanking(members, predictions, finishedMatches),
+    [members, predictions, finishedMatches]
+  );
 
   useEffect(() => {
     if (groups.length > 0 && !selectedGroup) setSelectedGroup(groups[0]);
   }, [groups]);
 
+  // Carga de datos de Firestore: solo cuando cambia el grupo seleccionado
   useFocusEffect(useCallback(() => {
     if (!selectedGroup) return;
     setLoadingRanking(true);
@@ -33,15 +42,15 @@ export default function RankingScreen() {
       const memberDocs = await Promise.all(
         selectedGroup.members.map((uid) => getDoc(doc(db, 'users', uid)))
       );
-      const members = memberDocs
-        .filter((d) => d.exists())
-        .map((d) => ({ userId: d.id, displayName: (d.data() as UserProfile).displayName, photoURL: (d.data() as UserProfile).photoURL }));
-
+      setMembers(
+        memberDocs
+          .filter((d) => d.exists())
+          .map((d) => ({ userId: d.id, displayName: (d.data() as UserProfile).displayName, photoURL: (d.data() as UserProfile).photoURL }))
+      );
       const predsSnap = await getDocs(
         query(collection(db, 'predictions'), where('userId', 'in', selectedGroup.members))
       );
-      const predictions = predsSnap.docs.map((d) => ({ id: d.id, ...d.data() } as Prediction));
-      setRanking(buildRanking(members, predictions, finishedMatches));
+      setPredictions(predsSnap.docs.map((d) => ({ id: d.id, ...d.data() } as Prediction)));
       setLoadingRanking(false);
     }
     load();

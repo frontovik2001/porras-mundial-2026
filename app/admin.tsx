@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  View, Text, StyleSheet, SectionList, TextInput,
+  View, Text, StyleSheet, SectionList, FlatList, TextInput,
   Pressable, ActivityIndicator, Alert,
 } from 'react-native';
 import { Redirect } from 'expo-router';
-import { doc, setDoc, deleteDoc, serverTimestamp, collection, query, where, getDocs, writeBatch } from 'firebase/firestore';
+import { doc, setDoc, deleteDoc, serverTimestamp, collection, query, where, getDocs, writeBatch, onSnapshot } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { useMatchResults } from '../hooks/useMatchResults';
@@ -12,15 +12,64 @@ import { isAdmin } from '../constants/admin';
 import { PHASE_LABELS, ALL_MATCHES } from '../constants/matches';
 import { FLAG } from '../constants/flags';
 import { calculatePoints } from '../lib/scoring';
-import { Match } from '../types';
-import { C, SHADOW } from '../constants/theme';
+import { Match, UserProfile } from '../types';
+import { C, SHADOW, T } from '../constants/theme';
+
+type AdminTab = 'resultados' | 'usuarios';
 
 export default function AdminScreen() {
   const { user } = useAuth();
   const liveMatches = useMatchResults();
+  const [tab, setTab] = useState<AdminTab>('resultados');
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
 
   if (!isAdmin(user?.uid)) {
     return <Redirect href="/(tabs)" />;
+  }
+
+  useEffect(() => {
+    if (tab !== 'usuarios') return;
+    setLoadingUsers(true);
+    const unsub = onSnapshot(collection(db, 'users'), (snap) => {
+      setUsers(snap.docs.map((d) => ({ uid: d.id, ...d.data() } as UserProfile)));
+      setLoadingUsers(false);
+    });
+    return unsub;
+  }, [tab]);
+
+  async function banUser(u: UserProfile) {
+    Alert.alert(
+      'Bloquear usuario',
+      `¿Bloquear a ${u.displayName}? Se eliminarán sus predicciones, se le quitará de todos los grupos y no podrá volver a entrar.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Bloquear', style: 'destructive', onPress: async () => {
+            try {
+              const { arrayRemove } = await import('firebase/firestore');
+              const batch = writeBatch(db);
+
+              // Borrar predicciones
+              const predsSnap = await getDocs(query(collection(db, 'predictions'), where('userId', '==', u.uid)));
+              predsSnap.docs.forEach((d) => batch.delete(d.ref));
+
+              // Quitarle de grupos
+              const groupsSnap = await getDocs(query(collection(db, 'groups'), where('members', 'array-contains', u.uid)));
+              groupsSnap.docs.forEach((d) => batch.update(d.ref, { members: arrayRemove(u.uid) }));
+
+              // Marcar como baneado (no borrar el doc para que no pueda crear cuenta nueva)
+              batch.update(doc(db, 'users', u.uid), { banned: true });
+
+              await batch.commit();
+              Alert.alert('Hecho', `${u.displayName} bloqueado`);
+            } catch {
+              Alert.alert('Error', 'No se pudo bloquear el usuario');
+            }
+          },
+        },
+      ]
+    );
   }
 
   const sections = useMemo(() => {
@@ -37,22 +86,62 @@ export default function AdminScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.banner}>
-        <Text style={styles.bannerText}>
-          ⚙️ Modo administrador — los resultados que guardes aquí se aplican a todos los usuarios y recalculan los puntos.
-        </Text>
+        <Text style={styles.bannerText}>⚙️ Panel de administrador</Text>
       </View>
 
-      <SectionList
-        sections={sections}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.list}
-        stickySectionHeadersEnabled={false}
-        keyboardShouldPersistTaps="handled"
-        renderSectionHeader={({ section: { title } }) => (
-          <Text style={styles.sectionTitle}>{title}</Text>
-        )}
-        renderItem={({ item }) => <AdminMatchRow match={item} />}
-      />
+      {/* Selector de pestaña */}
+      <View style={styles.tabRow}>
+        <Pressable style={[styles.tabBtn, tab === 'resultados' && styles.tabBtnActive]} onPress={() => setTab('resultados')}>
+          <Text style={[styles.tabText, tab === 'resultados' && styles.tabTextActive]}>Resultados</Text>
+        </Pressable>
+        <Pressable style={[styles.tabBtn, tab === 'usuarios' && styles.tabBtnActive]} onPress={() => setTab('usuarios')}>
+          <Text style={[styles.tabText, tab === 'usuarios' && styles.tabTextActive]}>Usuarios</Text>
+        </Pressable>
+      </View>
+
+      {tab === 'resultados' ? (
+        <SectionList
+          sections={sections}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.list}
+          stickySectionHeadersEnabled={false}
+          keyboardShouldPersistTaps="handled"
+          renderSectionHeader={({ section: { title } }) => (
+            <Text style={styles.sectionTitle}>{title}</Text>
+          )}
+          renderItem={({ item }) => <AdminMatchRow match={item} />}
+        />
+      ) : loadingUsers ? (
+        <ActivityIndicator color={T.color.accent} style={{ marginTop: 40 }} />
+      ) : (
+        <FlatList
+          data={users}
+          keyExtractor={(u) => u.uid}
+          contentContainerStyle={styles.list}
+          ListHeaderComponent={<Text style={styles.usersCount}>{users.length} usuarios registrados</Text>}
+          renderItem={({ item: u }) => (
+            <View style={styles.userRow}>
+              <View style={styles.userAvatar}>
+                <Text style={styles.userAvatarText}>{u.displayName.charAt(0).toUpperCase()}</Text>
+              </View>
+              <View style={styles.userInfo}>
+                <Text style={styles.userName}>{u.displayName}</Text>
+                <Text style={styles.userEmail}>{u.email}</Text>
+              </View>
+              {u.uid !== user?.uid && (
+                <Pressable
+                  style={[(u as any).banned ? styles.bannedBtn : styles.deleteBtn]}
+                  onPress={() => !(u as any).banned && banUser(u)}
+                >
+                  <Text style={(u as any).banned ? styles.bannedText : styles.deleteText}>
+                    {(u as any).banned ? 'Bloqueado' : 'Bloquear'}
+                  </Text>
+                </Pressable>
+              )}
+            </View>
+          )}
+        />
+      )}
     </View>
   );
 }
@@ -219,7 +308,23 @@ function AdminMatchRow({ match }: { match: Match }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
   banner: { backgroundColor: '#FEF3C7', padding: 14, borderBottomWidth: 1, borderBottomColor: '#FDE68A' },
-  bannerText: { color: '#92400E', fontSize: 12, lineHeight: 18 },
+  bannerText: { color: '#92400E', fontSize: 13, fontWeight: '700' },
+  tabRow: { flexDirection: 'row', backgroundColor: C.surface, borderBottomWidth: 1, borderBottomColor: C.border },
+  tabBtn: { flex: 1, paddingVertical: 12, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },
+  tabBtnActive: { borderBottomColor: T.color.accent },
+  tabText: { color: C.textSecondary, fontSize: 14, fontWeight: '600' },
+  tabTextActive: { color: T.color.accent },
+  usersCount: { color: C.textSecondary, fontSize: 12, marginBottom: 8 },
+  userRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.surface, borderRadius: 12, padding: 12, marginVertical: 4, gap: 12, ...SHADOW },
+  userAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: T.color.soft, alignItems: 'center', justifyContent: 'center' },
+  userAvatarText: { color: T.color.accent, fontSize: 18, fontWeight: '700' },
+  userInfo: { flex: 1 },
+  userName: { color: C.textPrimary, fontSize: 14, fontWeight: '700' },
+  userEmail: { color: C.textSecondary, fontSize: 12 },
+  deleteBtn:   { backgroundColor: '#FEE2E2', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 },
+  deleteText:  { color: C.miss, fontSize: 13, fontWeight: '700' },
+  bannedBtn:   { backgroundColor: C.border, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 },
+  bannedText:  { color: C.textTertiary, fontSize: 13, fontWeight: '700' },
   list: { padding: 16 },
   sectionTitle: { color: C.textPrimary, fontSize: 15, fontWeight: '700', marginTop: 16, marginBottom: 8 },
   card: { backgroundColor: C.surface, borderRadius: 14, padding: 14, marginVertical: 5, gap: 10, ...SHADOW },

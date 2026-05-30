@@ -92,9 +92,9 @@ export function MatchCard({ match, prediction, onSave, readOnly = false }: Props
         <View style={styles.footerRight}>
           {isFinished && hasPred && pts != null ? (
             pts === 5 ? (
-              <View style={styles.exactBadge}><Text style={styles.exactText}>Exacto</Text></View>
+              <View style={styles.exactBadge}><Text style={styles.exactText}>+5 pts</Text></View>
             ) : pts === 2 ? (
-              <View style={styles.resultBadge}><Text style={styles.resultText}>Resultado</Text></View>
+              <View style={styles.resultBadge}><Text style={styles.resultText}>+2 pts</Text></View>
             ) : (
               <View style={styles.missBadge}><Text style={styles.missText}>0 pts</Text></View>
             )
@@ -191,12 +191,12 @@ const styles = StyleSheet.create({
   predText:    { color: T.color.accent, fontSize: 12, fontFamily: 'HankenGrotesk_700Bold' },
   ctaBtn:      { backgroundColor: T.color.accent, borderRadius: T.radius.chip, paddingHorizontal: 12, paddingVertical: 5 },
   ctaText:     { color: '#fff', fontSize: 12, fontFamily: 'HankenGrotesk_700Bold' },
-  exactBadge:  { backgroundColor: T.color.good, borderRadius: T.radius.chip, paddingHorizontal: 10, paddingVertical: 4 },
+  exactBadge:  { backgroundColor: '#16a34a', borderRadius: T.radius.chip, paddingHorizontal: 10, paddingVertical: 4 },
   exactText:   { color: '#fff', fontSize: 12, fontFamily: 'HankenGrotesk_700Bold' },
-  resultBadge: { backgroundColor: T.color.soft, borderRadius: T.radius.chip, paddingHorizontal: 10, paddingVertical: 4 },
-  resultText:  { color: T.color.accent, fontSize: 12, fontFamily: 'HankenGrotesk_700Bold' },
-  missBadge:   { backgroundColor: T.color.line, borderRadius: T.radius.chip, paddingHorizontal: 10, paddingVertical: 4 },
-  missText:    { color: T.color.ink3, fontSize: 12, fontFamily: 'HankenGrotesk_700Bold' },
+  resultBadge: { backgroundColor: '#d97706', borderRadius: T.radius.chip, paddingHorizontal: 10, paddingVertical: 4 },
+  resultText:  { color: '#fff', fontSize: 12, fontFamily: 'HankenGrotesk_700Bold' },
+  missBadge:   { backgroundColor: '#dc2626', borderRadius: T.radius.chip, paddingHorizontal: 10, paddingVertical: 4 },
+  missText:    { color: '#fff', fontSize: 12, fontFamily: 'HankenGrotesk_700Bold' },
   pendingText: { color: T.color.ink3, fontSize: 11, fontFamily: 'HankenGrotesk_400Regular', fontStyle: 'italic' },
   resultRow:   { borderTopWidth: 1, borderTopColor: T.color.line, paddingTop: 6 },
   resultInfo:  { color: T.color.ink3, fontSize: 12, fontFamily: 'HankenGrotesk_500Medium' },
