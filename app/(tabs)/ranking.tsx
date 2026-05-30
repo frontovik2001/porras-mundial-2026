@@ -1,7 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import {
-  View, Text, StyleSheet, FlatList, ActivityIndicator, Pressable,
-} from 'react-native';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, Pressable } from 'react-native';
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useGroups } from '../../hooks/useGroup';
@@ -11,7 +9,7 @@ import { Podium } from '../../components/Podium';
 import { buildRanking } from '../../lib/scoring';
 import { ALL_MATCHES } from '../../constants/matches';
 import { Group, Prediction, RankingEntry, UserProfile } from '../../types';
-import { C, SHADOW } from '../../constants/theme';
+import { T } from '../../constants/theme';
 
 export default function RankingScreen() {
   const { user } = useAuth();
@@ -29,7 +27,6 @@ export default function RankingScreen() {
   useEffect(() => {
     if (!selectedGroup) return;
     setLoadingRanking(true);
-
     async function load() {
       if (!selectedGroup) return;
       const memberDocs = await Promise.all(
@@ -43,16 +40,14 @@ export default function RankingScreen() {
         query(collection(db, 'predictions'), where('userId', 'in', selectedGroup.members))
       );
       const predictions = predsSnap.docs.map((d) => ({ id: d.id, ...d.data() } as Prediction));
-
       setRanking(buildRanking(members, predictions, finishedMatches));
       setLoadingRanking(false);
     }
-
     load();
   }, [selectedGroup]);
 
   if (groupsLoading) {
-    return <View style={styles.center}><ActivityIndicator color={C.accent} size="large" /></View>;
+    return <View style={styles.center}><ActivityIndicator color={T.color.accent} size="large" /></View>;
   }
 
   if (groups.length === 0) {
@@ -78,7 +73,7 @@ export default function RankingScreen() {
             horizontal
             data={groups}
             keyExtractor={(g) => g.id}
-            contentContainerStyle={{ gap: 8 }}
+            contentContainerStyle={{ gap: T.space.sm }}
             showsHorizontalScrollIndicator={false}
             renderItem={({ item }) => (
               <Pressable
@@ -95,14 +90,14 @@ export default function RankingScreen() {
 
         {selectedGroup && (
           <View style={styles.codeRow}>
-            <Text style={styles.codeSub}>Código del grupo: </Text>
+            <Text style={styles.codeSub}>Código: </Text>
             <Text style={styles.codeValue}>{selectedGroup.code}</Text>
           </View>
         )}
       </View>
 
       {loadingRanking ? (
-        <ActivityIndicator color={C.accent} style={{ marginTop: 40 }} />
+        <ActivityIndicator color={T.color.accent} style={{ marginTop: 40 }} />
       ) : ranking.length === 0 ? (
         <View style={styles.empty}>
           <Text style={styles.emptyEmoji}>📊</Text>
@@ -115,9 +110,9 @@ export default function RankingScreen() {
           keyExtractor={(r) => r.userId}
           contentContainerStyle={styles.list}
           ListHeaderComponent={
-            ranking.length > 0 ? (
-              <Podium top3={ranking.slice(0, 3)} currentUserId={user?.uid} />
-            ) : null
+            ranking.length > 0
+              ? <Podium top3={ranking.slice(0, 3)} currentUserId={user?.uid} />
+              : null
           }
           renderItem={({ item, index }) => (
             <RankingItem entry={item} position={index + 4} isCurrentUser={item.userId === user?.uid} />
@@ -129,20 +124,20 @@ export default function RankingScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: C.bg },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: C.bg },
-  header: { paddingHorizontal: 20, paddingTop: 56, paddingBottom: 12, gap: 12, backgroundColor: C.bg },
-  title: { color: C.textPrimary, fontSize: 28, fontWeight: '800' },
-  chip: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border },
-  chipActive: { backgroundColor: C.accent, borderColor: C.accent },
-  chipText: { color: C.textSecondary, fontSize: 13, fontWeight: '600' },
+  container: { flex: 1, backgroundColor: T.color.bg },
+  center:    { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: T.color.bg },
+  header:    { paddingHorizontal: T.space.xl, paddingTop: 56, paddingBottom: T.space.lg, gap: T.space.sm, backgroundColor: T.color.bg },
+  title:     { color: T.color.ink, fontSize: 27, fontFamily: 'SchibstedGrotesk_800ExtraBold' },
+  chip:       { paddingHorizontal: T.space.md, paddingVertical: T.space.xs, borderRadius: T.radius.chip, borderWidth: 1, borderColor: T.color.line },
+  chipActive: { backgroundColor: T.color.accent, borderColor: T.color.accent },
+  chipText:       { color: T.color.ink2, fontSize: 13, fontFamily: 'HankenGrotesk_700Bold' },
   chipTextActive: { color: '#fff' },
-  codeRow: { flexDirection: 'row', alignItems: 'center' },
-  codeSub: { color: C.textSecondary, fontSize: 13 },
-  codeValue: { color: C.accent, fontSize: 13, fontWeight: '700' },
-  list: { paddingBottom: 32 },
-  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10, paddingHorizontal: 32 },
-  emptyEmoji: { fontSize: 48 },
-  emptyTitle: { color: C.textPrimary, fontSize: 18, fontWeight: '700' },
-  emptySub: { color: C.textSecondary, fontSize: 14, textAlign: 'center', lineHeight: 22 },
+  codeRow:   { flexDirection: 'row', alignItems: 'center' },
+  codeSub:   { color: T.color.ink3, fontSize: 13, fontFamily: 'HankenGrotesk_500Medium' },
+  codeValue: { color: T.color.accent, fontSize: 13, fontFamily: 'HankenGrotesk_700Bold' },
+  list:      { paddingBottom: 32 },
+  empty:     { flex: 1, alignItems: 'center', justifyContent: 'center', gap: T.space.sm, paddingHorizontal: 32 },
+  emptyEmoji:{ fontSize: 48 },
+  emptyTitle:{ color: T.color.ink, fontSize: 18, fontFamily: 'HankenGrotesk_700Bold' },
+  emptySub:  { color: T.color.ink2, fontSize: 14, fontFamily: 'HankenGrotesk_500Medium', textAlign: 'center', lineHeight: 22 },
 });

@@ -1,27 +1,14 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
-  TextInput,
-  ActivityIndicator,
-} from 'react-native';
+import { View, Text, Pressable, StyleSheet, TextInput, ActivityIndicator } from 'react-native';
 import { Match, Prediction } from '../types';
-import { FLAG } from '../constants/flags';
-import { C, SHADOW } from '../constants/theme';
+import { Flag } from './Flag';
+import { T } from '../constants/theme';
 
 interface Props {
   match: Match;
   prediction?: Prediction;
   onSave: (matchId: string, home: number, away: number) => Promise<void>;
 }
-
-const POINTS_COLOR: Record<number, string> = {
-  5: C.exact,
-  2: C.result,
-  0: C.miss,
-};
 
 export function MatchCard({ match, prediction, onSave }: Props) {
   const [expanded, setExpanded] = useState(false);
@@ -31,8 +18,11 @@ export function MatchCard({ match, prediction, onSave }: Props) {
 
   const isUpcoming = match.status === 'upcoming';
   const isFinished = match.status === 'finished';
+  const isLive     = match.status === 'live';
   const teamsKnown = match.homeTeam !== 'Por definir' && match.awayTeam !== 'Por definir';
   const isPredictable = isUpcoming && teamsKnown;
+  const hasPred    = prediction != null;
+  const pts        = prediction?.points;
 
   function handlePress() {
     if (!isPredictable) return;
@@ -54,67 +44,67 @@ export function MatchCard({ match, prediction, onSave }: Props) {
     }
   }
 
-  const dateStr = new Date(match.scheduledAt).toLocaleDateString('es-ES', {
-    weekday: 'short', day: 'numeric', month: 'short',
-  });
-  const timeStr = new Date(match.scheduledAt).toLocaleTimeString('es-ES', {
-    hour: '2-digit', minute: '2-digit',
-  });
+  const dateStr = new Date(match.scheduledAt).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
+  const timeStr = new Date(match.scheduledAt).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
 
   return (
     <Pressable style={styles.card} onPress={handlePress}>
+      {/* Equipos */}
       <View style={styles.teamsRow}>
-        {/* Local */}
-        <View style={styles.teamBox}>
-          <Text style={styles.flag}>{FLAG[match.homeTeam] ?? '🏳️'}</Text>
+        <View style={styles.team}>
+          <Flag team={match.homeTeam} size={34} />
           <Text style={styles.teamName} numberOfLines={2}>{match.homeTeam}</Text>
         </View>
 
-        {/* Marcador / vs */}
         <View style={styles.center}>
-          {isFinished ? (
-            <View style={styles.resultBox}>
-              <Text style={styles.resultText}>
-                {match.homeScore} – {match.awayScore}
-              </Text>
-              <Text style={styles.finishedLabel}>FIN</Text>
-            </View>
+          {isFinished || isLive ? (
+            <>
+              <Text style={styles.score}>{match.homeScore} – {match.awayScore}</Text>
+              {isLive
+                ? <View style={styles.liveBadge}><Text style={styles.liveText}>EN VIVO</Text></View>
+                : <Text style={styles.finLabel}>FIN</Text>}
+            </>
           ) : (
-            <Text style={styles.vs}>vs</Text>
+            <>
+              <Text style={styles.time}>{timeStr}</Text>
+              <Text style={styles.dateSmall}>{dateStr}</Text>
+            </>
           )}
         </View>
 
-        {/* Visitante */}
-        <View style={[styles.teamBox, styles.teamBoxRight]}>
-          <Text style={styles.flag}>{FLAG[match.awayTeam] ?? '🏳️'}</Text>
-          <Text style={[styles.teamName, styles.teamNameRight]} numberOfLines={2}>
-            {match.awayTeam}
-          </Text>
+        <View style={[styles.team, styles.teamRight]}>
+          <Flag team={match.awayTeam} size={34} />
+          <Text style={[styles.teamName, styles.teamNameRight]} numberOfLines={2}>{match.awayTeam}</Text>
         </View>
       </View>
 
+      {/* Separador */}
+      <View style={styles.divider} />
+
       {/* Footer */}
       <View style={styles.footer}>
-        <View style={styles.footerLeft}>
-          <Text style={styles.venue} numberOfLines={1}>{match.venue}</Text>
-          <Text style={styles.date}>{dateStr} · {timeStr}</Text>
+        <Text style={styles.venue} numberOfLines={1}>{match.venue}</Text>
+        <View style={styles.footerRight}>
+          {isFinished && hasPred && pts != null ? (
+            pts === 5 ? (
+              <View style={styles.exactBadge}><Text style={styles.exactText}>Exacto</Text></View>
+            ) : pts === 2 ? (
+              <View style={styles.resultBadge}><Text style={styles.resultText}>Resultado</Text></View>
+            ) : (
+              <View style={styles.missBadge}><Text style={styles.missText}>0 pts</Text></View>
+            )
+          ) : hasPred ? (
+            <View style={styles.predBadge}>
+              <Text style={styles.predText}>Tu pred · {prediction!.homeScore}–{prediction!.awayScore}</Text>
+            </View>
+          ) : isPredictable ? (
+            <View style={styles.ctaBtn}>
+              <Text style={styles.ctaText}>Predecir ✏️</Text>
+            </View>
+          ) : isUpcoming && !teamsKnown ? (
+            <Text style={styles.pendingText}>Por definir</Text>
+          ) : null}
         </View>
-        {prediction != null ? (
-          <View style={styles.predBadge}>
-            <Text style={styles.predText}>
-              Tu pred: {prediction.homeScore}–{prediction.awayScore}
-            </Text>
-            {prediction.points != null && (
-              <Text style={[styles.pts, { color: POINTS_COLOR[prediction.points] ?? C.textSecondary }]}>
-                {' '}· {prediction.points}pts
-              </Text>
-            )}
-          </View>
-        ) : isPredictable ? (
-          <Text style={styles.predCta}>Predecir ✏️</Text>
-        ) : isUpcoming && !teamsKnown ? (
-          <Text style={styles.pendingCta}>Equipos por definir</Text>
-        ) : null}
       </View>
 
       {/* Input inline */}
@@ -127,7 +117,7 @@ export function MatchCard({ match, prediction, onSave }: Props) {
             keyboardType="number-pad"
             maxLength={2}
             placeholder="0"
-            placeholderTextColor={C.textTertiary}
+            placeholderTextColor={T.color.ink3}
             selectTextOnFocus
             autoFocus
           />
@@ -139,7 +129,7 @@ export function MatchCard({ match, prediction, onSave }: Props) {
             keyboardType="number-pad"
             maxLength={2}
             placeholder="0"
-            placeholderTextColor={C.textTertiary}
+            placeholderTextColor={T.color.ink3}
             selectTextOnFocus
           />
           <Pressable
@@ -148,7 +138,7 @@ export function MatchCard({ match, prediction, onSave }: Props) {
             disabled={!homeInput || !awayInput || saving}
           >
             {saving
-              ? <ActivityIndicator color={C.accentText} size="small" />
+              ? <ActivityIndicator color="#fff" size="small" />
               : <Text style={styles.saveBtnText}>Guardar</Text>}
           </Pressable>
         </View>
@@ -159,145 +149,50 @@ export function MatchCard({ match, prediction, onSave }: Props) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: C.surface,
-    borderRadius: 16,
-    padding: 16,
+    backgroundColor: T.color.surface,
+    borderRadius: T.radius.card,
+    padding: 15,
     marginVertical: 5,
-    gap: 12,
-    ...SHADOW,
-  },
-  teamsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  teamBox: {
-    flex: 1,
-    alignItems: 'flex-start',
-    gap: 4,
-  },
-  teamBoxRight: {
-    alignItems: 'flex-end',
-  },
-  flag: {
-    fontSize: 30,
-  },
-  teamName: {
-    color: C.textPrimary,
-    fontSize: 13,
-    fontWeight: '600',
-    lineHeight: 18,
-  },
-  teamNameRight: {
-    textAlign: 'right',
-  },
-  center: {
-    width: 72,
-    alignItems: 'center',
-  },
-  vs: {
-    color: C.textTertiary,
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  resultBox: {
-    alignItems: 'center',
-    gap: 2,
-  },
-  resultText: {
-    color: C.textPrimary,
-    fontSize: 20,
-    fontWeight: '800',
-  },
-  finishedLabel: {
-    color: C.textTertiary,
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 1,
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  footerLeft: {
-    flex: 1,
-    gap: 2,
-    marginRight: 8,
-  },
-  venue: {
-    color: C.textTertiary,
-    fontSize: 11,
-  },
-  date: {
-    color: C.textSecondary,
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  predBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: C.accentLight,
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  predText: {
-    color: C.accent,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  pts: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  predCta: {
-    color: C.accent,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  pendingCta: {
-    color: C.textTertiary,
-    fontSize: 11,
-    fontStyle: 'italic',
-  },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: C.border,
-  },
-  input: {
-    width: 52,
-    height: 48,
-    backgroundColor: C.bg,
-    borderRadius: 12,
     borderWidth: 1,
-    borderColor: C.border,
-    color: C.textPrimary,
-    fontSize: 24,
-    fontWeight: '700',
-    textAlign: 'center',
+    borderColor: T.color.line,
+    ...T.shadow,
   },
-  dash: {
-    color: C.textTertiary,
-    fontSize: 20,
+  teamsRow: { flexDirection: 'row', alignItems: 'center' },
+  team:      { flex: 1, alignItems: 'flex-start', gap: T.space.xs },
+  teamRight: { alignItems: 'flex-end' },
+  teamName:  { color: T.color.ink, fontSize: 13, fontFamily: 'HankenGrotesk_700Bold', lineHeight: 18 },
+  teamNameRight: { textAlign: 'right' },
+  center:    { width: 80, alignItems: 'center', gap: 2 },
+  score:     { color: T.color.ink, fontSize: 22, fontFamily: 'SchibstedGrotesk_700Bold' },
+  finLabel:  { color: T.color.ink3, fontSize: 10, fontFamily: 'HankenGrotesk_500Medium', letterSpacing: 0.8 },
+  time:      { color: T.color.ink, fontSize: 18, fontFamily: 'SchibstedGrotesk_700Bold' },
+  dateSmall: { color: T.color.ink3, fontSize: 11, fontFamily: 'HankenGrotesk_500Medium' },
+  liveBadge: { backgroundColor: '#FEE2E2', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
+  liveText:  { color: T.color.danger, fontSize: 10, fontFamily: 'HankenGrotesk_700Bold', letterSpacing: 0.5 },
+  divider:   { height: 1, backgroundColor: T.color.line },
+  footer:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  venue:     { flex: 1, color: T.color.ink3, fontSize: 11, fontFamily: 'HankenGrotesk_400Regular' },
+  footerRight: { flexShrink: 0 },
+  predBadge:   { backgroundColor: T.color.soft, borderRadius: T.radius.chip, paddingHorizontal: 10, paddingVertical: 4 },
+  predText:    { color: T.color.accent, fontSize: 12, fontFamily: 'HankenGrotesk_700Bold' },
+  ctaBtn:      { backgroundColor: T.color.accent, borderRadius: T.radius.chip, paddingHorizontal: 12, paddingVertical: 5 },
+  ctaText:     { color: '#fff', fontSize: 12, fontFamily: 'HankenGrotesk_700Bold' },
+  exactBadge:  { backgroundColor: T.color.good, borderRadius: T.radius.chip, paddingHorizontal: 10, paddingVertical: 4 },
+  exactText:   { color: '#fff', fontSize: 12, fontFamily: 'HankenGrotesk_700Bold' },
+  resultBadge: { backgroundColor: T.color.soft, borderRadius: T.radius.chip, paddingHorizontal: 10, paddingVertical: 4 },
+  resultText:  { color: T.color.accent, fontSize: 12, fontFamily: 'HankenGrotesk_700Bold' },
+  missBadge:   { backgroundColor: T.color.line, borderRadius: T.radius.chip, paddingHorizontal: 10, paddingVertical: 4 },
+  missText:    { color: T.color.ink3, fontSize: 12, fontFamily: 'HankenGrotesk_700Bold' },
+  pendingText: { color: T.color.ink3, fontSize: 11, fontFamily: 'HankenGrotesk_400Regular', fontStyle: 'italic' },
+  inputRow:    { flexDirection: 'row', alignItems: 'center', gap: 8, paddingTop: 12, borderTopWidth: 1, borderTopColor: T.color.line },
+  input: {
+    width: 52, height: 48,
+    backgroundColor: T.color.bg,
+    borderRadius: 12, borderWidth: 1, borderColor: T.color.line,
+    color: T.color.ink, fontSize: 24, fontFamily: 'SchibstedGrotesk_700Bold', textAlign: 'center',
   },
-  saveBtn: {
-    flex: 1,
-    backgroundColor: C.green,
-    borderRadius: 12,
-    height: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  saveBtnDisabled: {
-    opacity: 0.3,
-  },
-  saveBtnText: {
-    color: C.accentText,
-    fontWeight: '700',
-    fontSize: 15,
-  },
+  dash:           { color: T.color.ink3, fontSize: 20 },
+  saveBtn:        { flex: 1, backgroundColor: T.color.accent, borderRadius: 12, height: 48, alignItems: 'center', justifyContent: 'center' },
+  saveBtnDisabled:{ opacity: 0.3 },
+  saveBtnText:    { color: '#fff', fontFamily: 'HankenGrotesk_700Bold', fontSize: 15 },
 });

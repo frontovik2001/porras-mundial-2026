@@ -1,46 +1,57 @@
+export const T = {
+  color: {
+    bg:         '#F6F7F5',
+    surface:    '#FFFFFF',
+    ink:        '#13201B',
+    ink2:       '#6B7770',
+    ink3:       '#9AA39D',
+    line:       '#E9ECE8',
+    accent:     '#0B7A55',
+    accentInk:  '#FFFFFF',
+    soft:       '#E7F3ED',
+    good:       '#0B7A55',
+    danger:     '#E1385A',
+    gold:       '#F59E0B',
+    silver:     '#64748B',
+    bronze:     '#C2784B',
+  },
+  radius: { card: 18, chip: 999, flag: 17 },
+  space:  { xs: 6, sm: 10, md: 14, lg: 18, xl: 24 },
+  shadow: {
+    shadowColor: '#13201B',
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 2,
+  },
+};
+
+// Backwards compat — pantallas que aún usen C seguirán funcionando
 export const C = {
-  // Fondos
-  bg: '#F5F5F7',
-  surface: '#FFFFFF',
-  surfaceAlt: '#F0F0F5',
-
-  // Texto
-  textPrimary: '#111111',
-  textSecondary: '#6B6B6B',
-  textTertiary: '#ABABAB',
-
-  // Acento principal — azul profundo
-  accent: '#1D4ED8',
-  accentLight: '#DBEAFE',
-  accentText: '#FFFFFF',
-
-  // Bordes y separadores
-  border: '#E4E4E7',
-  separator: '#F0F0F2',
-
-  // Resultados
-  exact: '#059669',     // 5 pts — verde
-  result: '#D97706',    // 2 pts — ámbar
-  miss: '#DC2626',      // 0 pts — rojo
-
-  // Tab bar
-  tabActive: '#1D4ED8',
-  tabInactive: '#ABABAB',
-  tabBg: '#FFFFFF',
-
-  // Podio (top 3)
-  gold: '#F59E0B',
-  goldDark: '#B45309',
-  silver: '#64748B',
-  silverDark: '#475569',
-  bronze: '#C2784B',
-  bronzeDark: '#8A4B2A',
+  bg:             T.color.bg,
+  surface:        T.color.surface,
+  surfaceAlt:     T.color.line,
+  textPrimary:    T.color.ink,
+  textSecondary:  T.color.ink2,
+  textTertiary:   T.color.ink3,
+  accent:         T.color.accent,
+  accentLight:    T.color.soft,
+  accentText:     T.color.accentInk,
+  border:         T.color.line,
+  separator:      T.color.line,
+  exact:          T.color.good,
+  result:         '#D97706',
+  miss:           T.color.danger,
+  green:          T.color.accent,
+  tabActive:      T.color.accent,
+  tabInactive:    T.color.ink3,
+  tabBg:          T.color.surface,
+  gold:           T.color.gold,
+  goldDark:       '#B45309',
+  silver:         T.color.silver,
+  silverDark:     '#475569',
+  bronze:         T.color.bronze,
+  bronzeDark:     '#8A4B2A',
 };
 
-export const SHADOW = {
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: 1 },
-  shadowOpacity: 0.06,
-  shadowRadius: 4,
-  elevation: 2,
-};
+export const SHADOW = T.shadow;

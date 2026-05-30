@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, FlatList, Pressable, ActivityIndicator } from '
 import { router } from 'expo-router';
 import { GroupCard } from '../../components/GroupCard';
 import { useGroups } from '../../hooks/useGroup';
-import { C } from '../../constants/theme';
+import { T } from '../../constants/theme';
 
 export default function GruposScreen() {
   const { groups, loading } = useGroups();
@@ -23,7 +23,7 @@ export default function GruposScreen() {
       </View>
 
       {loading ? (
-        <ActivityIndicator color={C.accent} style={{ marginTop: 40 }} />
+        <ActivityIndicator color={T.color.accent} style={{ marginTop: 40 }} />
       ) : groups.length === 0 ? (
         <View style={styles.empty}>
           <Text style={styles.emptyEmoji}>👥</Text>
@@ -45,17 +45,17 @@ export default function GruposScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: C.bg },
-  header: { paddingHorizontal: 20, paddingTop: 56, paddingBottom: 12, gap: 14 },
-  title: { color: C.textPrimary, fontSize: 28, fontWeight: '800' },
-  actions: { flexDirection: 'row', gap: 10 },
-  btn: { backgroundColor: C.accent, borderRadius: 12, paddingHorizontal: 20, paddingVertical: 10 },
-  btnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
-  btnOutline: { backgroundColor: C.surface, borderRadius: 12, paddingHorizontal: 20, paddingVertical: 10, borderWidth: 1, borderColor: C.border },
-  btnOutlineText: { color: C.accent, fontWeight: '700', fontSize: 14 },
-  list: { paddingHorizontal: 16, paddingBottom: 32 },
-  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10, paddingHorizontal: 32 },
-  emptyEmoji: { fontSize: 48 },
-  emptyTitle: { color: C.textPrimary, fontSize: 18, fontWeight: '700' },
-  emptySub: { color: C.textSecondary, fontSize: 14, textAlign: 'center', lineHeight: 22 },
+  container: { flex: 1, backgroundColor: T.color.bg },
+  header:    { paddingHorizontal: T.space.xl, paddingTop: 56, paddingBottom: T.space.lg, gap: T.space.md, backgroundColor: T.color.bg },
+  title:     { color: T.color.ink, fontSize: 27, fontFamily: 'SchibstedGrotesk_800ExtraBold' },
+  actions:   { flexDirection: 'row', gap: T.space.sm },
+  btn:       { backgroundColor: T.color.accent, borderRadius: T.radius.chip, paddingHorizontal: T.space.lg, paddingVertical: T.space.sm },
+  btnText:   { color: '#fff', fontFamily: 'HankenGrotesk_700Bold', fontSize: 14 },
+  btnOutline:     { backgroundColor: T.color.surface, borderRadius: T.radius.chip, paddingHorizontal: T.space.lg, paddingVertical: T.space.sm, borderWidth: 1, borderColor: T.color.line },
+  btnOutlineText: { color: T.color.accent, fontFamily: 'HankenGrotesk_700Bold', fontSize: 14 },
+  list:      { paddingHorizontal: T.space.lg, paddingBottom: 32 },
+  empty:     { flex: 1, alignItems: 'center', justifyContent: 'center', gap: T.space.sm, paddingHorizontal: 32 },
+  emptyEmoji:{ fontSize: 48 },
+  emptyTitle:{ color: T.color.ink, fontSize: 18, fontFamily: 'HankenGrotesk_700Bold' },
+  emptySub:  { color: T.color.ink2, fontSize: 14, fontFamily: 'HankenGrotesk_500Medium', textAlign: 'center', lineHeight: 22 },
 });
