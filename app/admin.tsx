@@ -176,8 +176,9 @@ export default function AdminScreen() {
           )}
           renderItem={({ item }) => <AdminMatchRow match={item} />}
         />
-      ) : loadingUsers ? (
-        <ActivityIndicator color={T.color.accent} style={{ marginTop: 40 }} />
+      ) : tab === 'usuarios' ? (
+        loadingUsers ? (
+          <ActivityIndicator color={T.color.accent} style={{ marginTop: 40 }} />
       ) : (
         <FlatList
           data={users.filter((u) => {
@@ -224,6 +225,7 @@ export default function AdminScreen() {
             </View>
           )}
         />
+        )
       ) : loadingGroups ? (
         <ActivityIndicator color={T.color.accent} style={{ marginTop: 40 }} />
       ) : (
