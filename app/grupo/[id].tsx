@@ -1,31 +1,24 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, FlatList, ActivityIndicator, Pressable, Share,
 } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
-import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../contexts/AuthContext';
-import { RankingItem } from '../../components/RankingItem';
-import { Podium } from '../../components/Podium';
-import { buildRanking } from '../../lib/scoring';
-import { ALL_MATCHES } from '../../constants/matches';
-import { Group, Prediction, RankingEntry, UserProfile } from '../../types';
-import { C, SHADOW } from '../../constants/theme';
+import { Group, UserProfile } from '../../types';
+import { T, SHADOW } from '../../constants/theme';
 import { MAX_GROUP_MEMBERS } from '../../constants/admin';
 
 export default function GrupoDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
   const [group, setGroup] = useState<Group | null>(null);
-  const [ranking, setRanking] = useState<RankingEntry[]>([]);
+  const [members, setMembers] = useState<{ userId: string; displayName: string; photoURL: string | null }[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const finishedMatches = useMemo(() => ALL_MATCHES.filter((m) => m.status === 'finished'), []);
 
   useEffect(() => {
     if (!id) return;
-
     async function load() {
       const groupSnap = await getDoc(doc(db, 'groups', id!));
       if (!groupSnap.exists()) { setLoading(false); return; }
@@ -36,19 +29,14 @@ export default function GrupoDetailScreen() {
       const memberDocs = await Promise.all(
         groupData.members.map((uid) => getDoc(doc(db, 'users', uid)))
       );
-      const members = memberDocs
-        .filter((d) => d.exists())
-        .map((d) => ({ userId: d.id, displayName: (d.data() as UserProfile).displayName, photoURL: (d.data() as UserProfile).photoURL }));
-
-      const predsSnap = await getDocs(
-        query(collection(db, 'predictions'), where('userId', 'in', groupData.members))
+      setMembers(
+        memberDocs
+          .filter((d) => d.exists())
+          .map((d) => ({ userId: d.id, displayName: (d.data() as UserProfile).displayName, photoURL: (d.data() as UserProfile).photoURL }))
       );
-      const predictions = predsSnap.docs.map((d) => ({ id: d.id, ...d.data() } as Prediction));
 
-      setRanking(buildRanking(members, predictions, finishedMatches));
       setLoading(false);
     }
-
     load();
   }, [id]);
 
@@ -59,81 +47,72 @@ export default function GrupoDetailScreen() {
     });
   }
 
-  if (loading) {
-    return <View style={styles.center}><ActivityIndicator color={C.accent} /></View>;
-  }
-
-  if (!group) {
-    return <View style={styles.center}><Text style={styles.error}>Grupo no encontrado</Text></View>;
-  }
+  if (loading) return <View style={styles.center}><ActivityIndicator color={T.color.accent} /></View>;
+  if (!group)  return <View style={styles.center}><Text style={styles.error}>Grupo no encontrado</Text></View>;
 
   return (
     <View style={styles.container}>
-      <View style={styles.headerCard}>
-        <Text style={styles.groupName}>{group.name}</Text>
-        <Text style={styles.memberCount}>{group.members.length}/{MAX_GROUP_MEMBERS} miembros{group.members.length >= MAX_GROUP_MEMBERS ? ' · COMPLETO' : ''}</Text>
-        <Pressable style={styles.shareBtn} onPress={shareCode}>
-          <Text style={styles.shareBtnText}>Compartir · {group.code}</Text>
-        </Pressable>
-      </View>
+      <FlatList
+        data={[]}
+        keyExtractor={(r) => r.userId}
+        contentContainerStyle={styles.list}
+        ListHeaderComponent={
+          <>
+            {/* Cabecera del grupo */}
+            <View style={styles.headerCard}>
+              <Text style={styles.groupName}>{group.name}</Text>
+              <Text style={styles.memberCount}>{group.members.length}/{MAX_GROUP_MEMBERS} miembros{group.members.length >= MAX_GROUP_MEMBERS ? ' · COMPLETO' : ''}</Text>
+              <Pressable style={styles.shareBtn} onPress={shareCode}>
+                <Text style={styles.shareBtnText}>Compartir · {group.code}</Text>
+              </Pressable>
+            </View>
 
-      {finishedMatches.length === 0 ? (
-        <View style={styles.empty}>
-          <Text style={styles.emptyEmoji}>📊</Text>
-          <Text style={styles.emptyText}>El ranking se actualiza cuando terminen los partidos</Text>
-        </View>
-      ) : (
-        <FlatList
-          data={ranking.slice(3)}
-          keyExtractor={(r) => r.userId}
-          contentContainerStyle={styles.list}
-          ListHeaderComponent={
-            <>
-              <Text style={styles.sectionTitle}>Clasificación</Text>
-              {ranking.length > 0 && <Podium top3={ranking.slice(0, 3)} currentUserId={user?.uid} />}
-            </>
-          }
-          renderItem={({ item, index }) => (
-            <RankingItem entry={item} position={index + 4} isCurrentUser={item.userId === user?.uid} />
-          )}
-        />
-      )}
+            {/* Miembros */}
+            <Text style={styles.sectionTitle}>Miembros</Text>
+            {members.map((m) => (
+              <View key={m.userId} style={styles.memberRow}>
+                <View style={styles.memberAvatar}>
+                  <Text style={styles.memberAvatarText}>{m.displayName.charAt(0).toUpperCase()}</Text>
+                </View>
+                <Text style={styles.memberName}>{m.displayName}{m.userId === user?.uid ? ' (tú)' : ''}</Text>
+                {m.userId === group.ownerId && <Text style={styles.ownerBadge}>Admin</Text>}
+              </View>
+            ))}
+
+          </>
+        }
+        renderItem={() => null}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: C.bg },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: C.bg },
-  error: { color: C.miss, fontSize: 16 },
+  container: { flex: 1, backgroundColor: T.color.bg },
+  center:    { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: T.color.bg },
+  error:     { color: T.color.danger, fontSize: 16 },
+  list:      { paddingBottom: 32 },
   headerCard: {
     margin: 16,
-    backgroundColor: C.surface,
-    borderRadius: 16,
+    backgroundColor: T.color.surface,
+    borderRadius: T.radius.card,
     padding: 18,
     gap: 6,
+    borderWidth: 1,
+    borderColor: T.color.line,
     ...SHADOW,
   },
-  groupName: { color: C.textPrimary, fontSize: 22, fontWeight: '800' },
-  memberCount: { color: C.textSecondary, fontSize: 14 },
-  shareBtn: {
-    backgroundColor: C.accentLight,
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    alignSelf: 'flex-start',
-    marginTop: 8,
-  },
-  shareBtnText: { color: C.accent, fontSize: 14, fontWeight: '700' },
-  list: { paddingBottom: 32 },
-  sectionTitle: {
-    color: C.textPrimary,
-    fontSize: 15,
-    fontWeight: '700',
-    paddingHorizontal: 20,
-    paddingBottom: 8,
-  },
-  empty: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32, gap: 10 },
-  emptyEmoji: { fontSize: 40 },
-  emptyText: { color: C.textSecondary, fontSize: 15, textAlign: 'center', lineHeight: 24 },
+  groupName:   { color: T.color.ink, fontSize: 22, fontFamily: 'SchibstedGrotesk_800ExtraBold' },
+  memberCount: { color: T.color.ink2, fontSize: 14, fontFamily: 'HankenGrotesk_500Medium' },
+  shareBtn:    { backgroundColor: T.color.soft, borderRadius: T.radius.chip, paddingVertical: 8, paddingHorizontal: 14, alignSelf: 'flex-start', marginTop: 8 },
+  shareBtnText:{ color: T.color.accent, fontSize: 14, fontFamily: 'HankenGrotesk_700Bold' },
+  sectionTitle:{ color: T.color.ink, fontSize: 13, fontFamily: 'HankenGrotesk_700Bold', textTransform: 'uppercase', letterSpacing: 0.8, paddingHorizontal: 16, paddingBottom: 8 },
+  memberRow:   { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, gap: 12, borderBottomWidth: 1, borderBottomColor: T.color.line, backgroundColor: T.color.surface },
+  memberAvatar:{ width: 36, height: 36, borderRadius: 18, backgroundColor: T.color.soft, alignItems: 'center', justifyContent: 'center' },
+  memberAvatarText: { color: T.color.accent, fontSize: 16, fontFamily: 'SchibstedGrotesk_700Bold' },
+  memberName:  { flex: 1, color: T.color.ink, fontSize: 15, fontFamily: 'HankenGrotesk_700Bold' },
+  ownerBadge:  { color: T.color.accent, fontSize: 12, fontFamily: 'HankenGrotesk_700Bold', backgroundColor: T.color.soft, paddingHorizontal: 8, paddingVertical: 3, borderRadius: T.radius.chip },
+  empty:       { padding: 32, alignItems: 'center', gap: 10 },
+  emptyEmoji:  { fontSize: 40 },
+  emptyText:   { color: T.color.ink2, fontSize: 15, fontFamily: 'HankenGrotesk_500Medium', textAlign: 'center', lineHeight: 24 },
 });

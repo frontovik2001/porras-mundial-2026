@@ -4,7 +4,7 @@ import {
   Pressable, ActivityIndicator, Alert,
 } from 'react-native';
 import { Redirect } from 'expo-router';
-import { doc, setDoc, deleteDoc, serverTimestamp, collection, query, where, getDocs, writeBatch, onSnapshot } from 'firebase/firestore';
+import { doc, setDoc, deleteDoc, serverTimestamp, collection, query, where, getDocs, writeBatch, onSnapshot, arrayRemove } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { useMatchResults } from '../hooks/useMatchResults';
@@ -47,7 +47,6 @@ export default function AdminScreen() {
         {
           text: 'Bloquear', style: 'destructive', onPress: async () => {
             try {
-              const { arrayRemove } = await import('firebase/firestore');
               const batch = writeBatch(db);
 
               // Borrar predicciones
