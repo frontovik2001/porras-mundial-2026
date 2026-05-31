@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, ActivityIndicator, Pressable, Share,
+  View, Text, StyleSheet, FlatList, ActivityIndicator, Pressable, Share, Alert,
 } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
-import { doc, getDoc } from 'firebase/firestore';
+import { useLocalSearchParams, router } from 'expo-router';
+import { doc, getDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../contexts/AuthContext';
 import { Group, UserProfile } from '../../types';
@@ -40,6 +40,27 @@ export default function GrupoDetailScreen() {
     load();
   }, [id]);
 
+  async function handleDelete() {
+    if (!group) return;
+    Alert.alert(
+      'Borrar grupo',
+      `¿Seguro que quieres borrar "${group.name}"? Se eliminará para todos los miembros y no se puede deshacer.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Borrar', style: 'destructive', onPress: async () => {
+            try {
+              await deleteDoc(doc(db, 'groups', group.id));
+              router.replace('/(tabs)/grupos');
+            } catch {
+              Alert.alert('Error', 'No se pudo borrar el grupo');
+            }
+          },
+        },
+      ]
+    );
+  }
+
   async function shareCode() {
     if (!group) return;
     await Share.share({
@@ -62,9 +83,16 @@ export default function GrupoDetailScreen() {
             <View style={styles.headerCard}>
               <Text style={styles.groupName}>{group.name}</Text>
               <Text style={styles.memberCount}>{group.members.length}/{MAX_GROUP_MEMBERS} miembros{group.members.length >= MAX_GROUP_MEMBERS ? ' · COMPLETO' : ''}</Text>
-              <Pressable style={styles.shareBtn} onPress={shareCode}>
-                <Text style={styles.shareBtnText}>Compartir · {group.code}</Text>
-              </Pressable>
+              <View style={styles.btnRow}>
+                <Pressable style={styles.shareBtn} onPress={shareCode}>
+                  <Text style={styles.shareBtnText}>Compartir · {group.code}</Text>
+                </Pressable>
+                {user?.uid === group.ownerId && (
+                  <Pressable style={styles.deleteBtn} onPress={handleDelete}>
+                    <Text style={styles.deleteBtnText}>Borrar grupo</Text>
+                  </Pressable>
+                )}
+              </View>
             </View>
 
             {/* Miembros */}
@@ -104,8 +132,11 @@ const styles = StyleSheet.create({
   },
   groupName:   { color: T.color.ink, fontSize: 22, fontFamily: 'SchibstedGrotesk_800ExtraBold' },
   memberCount: { color: T.color.ink2, fontSize: 14, fontFamily: 'HankenGrotesk_500Medium' },
-  shareBtn:    { backgroundColor: T.color.soft, borderRadius: T.radius.chip, paddingVertical: 8, paddingHorizontal: 14, alignSelf: 'flex-start', marginTop: 8 },
+  btnRow:      { flexDirection: 'row', gap: 8, marginTop: 8, flexWrap: 'wrap' },
+  shareBtn:    { backgroundColor: T.color.soft, borderRadius: T.radius.chip, paddingVertical: 8, paddingHorizontal: 14 },
   shareBtnText:{ color: T.color.accent, fontSize: 14, fontFamily: 'HankenGrotesk_700Bold' },
+  deleteBtn:   { backgroundColor: '#FEE2E2', borderRadius: T.radius.chip, paddingVertical: 8, paddingHorizontal: 14 },
+  deleteBtnText:{ color: '#dc2626', fontSize: 14, fontFamily: 'HankenGrotesk_700Bold' },
   sectionTitle:{ color: T.color.ink, fontSize: 13, fontFamily: 'HankenGrotesk_700Bold', textTransform: 'uppercase', letterSpacing: 0.8, paddingHorizontal: 16, paddingBottom: 8 },
   memberRow:   { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, gap: 12, borderBottomWidth: 1, borderBottomColor: T.color.line, backgroundColor: T.color.surface },
   memberAvatar:{ width: 36, height: 36, borderRadius: 18, backgroundColor: T.color.soft, alignItems: 'center', justifyContent: 'center' },
