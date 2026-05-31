@@ -6,7 +6,7 @@ import {
 import { router } from 'expo-router';
 import { Image } from 'react-native';
 
-const logo = require('../../assets/portada logo.png');
+const logo = require('../../assets/portada-logo.png');
 import { useAuth } from '../../contexts/AuthContext';
 import { useGroups } from '../../hooks/useGroup';
 import { T } from '../../constants/theme';

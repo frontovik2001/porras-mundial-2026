@@ -9,7 +9,7 @@ import * as Google from 'expo-auth-session/providers/google';
 import { useAuth } from '../../contexts/AuthContext';
 import { T } from '../../constants/theme';
 
-const logo = require('../../assets/portada logo.png');
+const logo = require('../../assets/portada-logo.png');
 
 WebBrowser.maybeCompleteAuthSession();
 
