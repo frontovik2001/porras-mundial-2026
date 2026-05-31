@@ -74,7 +74,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function signIn(email: string, password: string) {
-    await signInWithEmailAndPassword(auth, email, password);
+    const { user: firebaseUser } = await signInWithEmailAndPassword(auth, email, password);
+    const snap = await getDoc(doc(db, 'users', firebaseUser.uid));
+    if (snap.exists() && (snap.data() as any).banned) {
+      await signOut(auth);
+      throw { code: 'auth/user-banned' };
+    }
   }
 
   async function signUp(email: string, password: string, displayName: string) {

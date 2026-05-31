@@ -137,6 +137,7 @@ function mapFirebaseError(e: unknown): string {
   if (code === 'auth/user-not-found')     return 'No existe una cuenta con este correo';
   if (code === 'auth/wrong-password')     return 'Contraseña incorrecta';
   if (code === 'auth/too-many-requests')  return 'Demasiados intentos. Intenta más tarde';
+  if (code === 'auth/user-banned')        return 'Tu cuenta ha sido bloqueada. Contacta con el administrador.';
   return 'Error al iniciar sesión';
 }
 

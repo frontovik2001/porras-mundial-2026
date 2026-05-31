@@ -22,6 +22,7 @@ export default function AdminScreen() {
   const liveMatches = useMatchResults();
   const [tab, setTab] = useState<AdminTab>('resultados');
   const [users, setUsers] = useState<UserProfile[]>([]);
+  const [userFilter, setUserFilter] = useState<'all' | 'active' | 'banned'>('all');
   const [loadingUsers, setLoadingUsers] = useState(false);
 
   if (!isAdmin(user?.uid)) {
@@ -134,10 +135,28 @@ export default function AdminScreen() {
         <ActivityIndicator color={T.color.accent} style={{ marginTop: 40 }} />
       ) : (
         <FlatList
-          data={users}
+          data={users.filter((u) => {
+            if (userFilter === 'active') return !(u as any).banned;
+            if (userFilter === 'banned') return (u as any).banned;
+            return true;
+          })}
           keyExtractor={(u) => u.uid}
           contentContainerStyle={styles.list}
-          ListHeaderComponent={<Text style={styles.usersCount}>{users.length} usuarios registrados</Text>}
+          ListHeaderComponent={
+            <View style={styles.userFilterRow}>
+              {(['all', 'active', 'banned'] as const).map((f) => (
+                <Pressable
+                  key={f}
+                  style={[styles.userFilterBtn, userFilter === f && styles.userFilterBtnActive]}
+                  onPress={() => setUserFilter(f)}
+                >
+                  <Text style={[styles.userFilterText, userFilter === f && styles.userFilterTextActive]}>
+                    {f === 'all' ? 'Todos' : f === 'active' ? 'Activos' : 'Bloqueados'}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          }
           renderItem={({ item: u }) => (
             <View style={styles.userRow}>
               <View style={styles.userAvatar}>
@@ -334,6 +353,11 @@ const styles = StyleSheet.create({
   tabText: { color: C.textSecondary, fontSize: 14, fontWeight: '600' },
   tabTextActive: { color: T.color.accent },
   usersCount: { color: C.textSecondary, fontSize: 12, marginBottom: 8 },
+  userFilterRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
+  userFilterBtn: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 999, borderWidth: 1, borderColor: C.border, backgroundColor: C.surface },
+  userFilterBtnActive: { backgroundColor: T.color.accent, borderColor: T.color.accent },
+  userFilterText: { color: C.textSecondary, fontSize: 13, fontWeight: '600' },
+  userFilterTextActive: { color: '#fff' },
   userRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.surface, borderRadius: 12, padding: 12, marginVertical: 4, gap: 12, ...SHADOW },
   userAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: T.color.soft, alignItems: 'center', justifyContent: 'center' },
   userAvatarText: { color: T.color.accent, fontSize: 18, fontWeight: '700' },
