@@ -15,7 +15,8 @@ import { calculatePoints } from '../lib/scoring';
 import { Match, UserProfile } from '../types';
 import { C, SHADOW, T } from '../constants/theme';
 
-type AdminTab = 'resultados' | 'usuarios';
+type AdminTab = 'resultados' | 'usuarios' | 'grupos';
+interface AdminGroup { id: string; name: string; code: string; ownerId: string; members: string[]; memberNames: string[] }
 
 export default function AdminScreen() {
   const { user } = useAuth();
@@ -24,6 +25,8 @@ export default function AdminScreen() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [userFilter, setUserFilter] = useState<'all' | 'active' | 'banned'>('all');
   const [loadingUsers, setLoadingUsers] = useState(false);
+  const [groups, setGroups] = useState<AdminGroup[]>([]);
+  const [loadingGroups, setLoadingGroups] = useState(false);
 
   if (!isAdmin(user?.uid)) {
     return <Redirect href="/(tabs)" />;
@@ -38,6 +41,45 @@ export default function AdminScreen() {
     });
     return unsub;
   }, [tab]);
+
+  useEffect(() => {
+    if (tab !== 'grupos') return;
+    setLoadingGroups(true);
+    const unsub = onSnapshot(collection(db, 'groups'), async (snap) => {
+      const groupDocs = snap.docs.map((d) => ({ id: d.id, ...d.data() } as any));
+      // Cargar nombres de miembros
+      const allUids = [...new Set(groupDocs.flatMap((g: any) => g.members as string[]))];
+      const userDocs = await Promise.all(allUids.map((uid) => getDocs(query(collection(db, 'users'), where('__name__', '==', uid)))));
+      const nameMap: Record<string, string> = {};
+      userDocs.forEach((snap) => snap.docs.forEach((d) => { nameMap[d.id] = (d.data() as UserProfile).displayName; }));
+      setGroups(groupDocs.map((g: any) => ({
+        ...g,
+        memberNames: (g.members as string[]).map((uid: string) => nameMap[uid] ?? uid),
+      })));
+      setLoadingGroups(false);
+    });
+    return unsub;
+  }, [tab]);
+
+  async function deleteGroup(g: AdminGroup) {
+    Alert.alert(
+      'Borrar grupo',
+      `¿Borrar el grupo "${g.name}"? Se eliminará para todos sus miembros. No se puede deshacer.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Borrar', style: 'destructive', onPress: async () => {
+            try {
+              await deleteDoc(doc(db, 'groups', g.id));
+              Alert.alert('Hecho', `Grupo "${g.name}" eliminado`);
+            } catch {
+              Alert.alert('Error', 'No se pudo borrar el grupo');
+            }
+          },
+        },
+      ]
+    );
+  }
 
   async function banUser(u: UserProfile) {
     Alert.alert(
@@ -117,6 +159,9 @@ export default function AdminScreen() {
         <Pressable style={[styles.tabBtn, tab === 'usuarios' && styles.tabBtnActive]} onPress={() => setTab('usuarios')}>
           <Text style={[styles.tabText, tab === 'usuarios' && styles.tabTextActive]}>Usuarios</Text>
         </Pressable>
+        <Pressable style={[styles.tabBtn, tab === 'grupos' && styles.tabBtnActive]} onPress={() => setTab('grupos')}>
+          <Text style={[styles.tabText, tab === 'grupos' && styles.tabTextActive]}>Grupos</Text>
+        </Pressable>
       </View>
 
       {tab === 'resultados' ? (
@@ -176,6 +221,29 @@ export default function AdminScreen() {
                   </Text>
                 </Pressable>
               )}
+            </View>
+          )}
+        />
+      ) : loadingGroups ? (
+        <ActivityIndicator color={T.color.accent} style={{ marginTop: 40 }} />
+      ) : (
+        <FlatList
+          data={groups}
+          keyExtractor={(g) => g.id}
+          contentContainerStyle={styles.list}
+          ListHeaderComponent={<Text style={styles.usersCount}>{groups.length} grupos en la app</Text>}
+          renderItem={({ item: g }) => (
+            <View style={styles.groupAdminCard}>
+              <View style={styles.groupAdminHeader}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.groupAdminName}>{g.name}</Text>
+                  <Text style={styles.groupAdminCode}>Código: {g.code} · {g.members.length} miembros</Text>
+                </View>
+                <Pressable style={styles.deleteBtn} onPress={() => deleteGroup(g)}>
+                  <Text style={styles.deleteText}>Borrar</Text>
+                </Pressable>
+              </View>
+              <Text style={styles.groupAdminMembers}>{g.memberNames.join(' · ')}</Text>
             </View>
           )}
         />
@@ -366,6 +434,11 @@ const styles = StyleSheet.create({
   userEmail: { color: C.textSecondary, fontSize: 12 },
   deleteBtn:   { backgroundColor: '#FEE2E2', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 },
   deleteText:  { color: C.miss, fontSize: 13, fontWeight: '700' },
+  groupAdminCard:    { backgroundColor: C.surface, borderRadius: 12, padding: 14, marginVertical: 4, gap: 8, ...SHADOW },
+  groupAdminHeader:  { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  groupAdminName:    { color: C.textPrimary, fontSize: 15, fontWeight: '700' },
+  groupAdminCode:    { color: C.textSecondary, fontSize: 12 },
+  groupAdminMembers: { color: C.textTertiary, fontSize: 12, lineHeight: 18 },
   bannedBtn:   { backgroundColor: C.border, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 },
   bannedText:  { color: C.textTertiary, fontSize: 13, fontWeight: '700' },
   list: { padding: 16 },
