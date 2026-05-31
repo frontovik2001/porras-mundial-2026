@@ -38,7 +38,7 @@ export default function AdminScreen() {
     const unsub = onSnapshot(collection(db, 'users'), (snap) => {
       setUsers(snap.docs.map((d) => ({ uid: d.id, ...d.data() } as UserProfile)));
       setLoadingUsers(false);
-    });
+    }, () => setLoadingUsers(false));
     return unsub;
   }, [tab]);
 
@@ -46,6 +46,7 @@ export default function AdminScreen() {
     if (tab !== 'grupos') return;
     setLoadingGroups(true);
     const unsub = onSnapshot(collection(db, 'groups'), async (snap) => {
+
       const groupDocs = snap.docs.map((d) => ({ id: d.id, ...d.data() } as any));
       // Cargar nombres de miembros
       const allUids = [...new Set(groupDocs.flatMap((g: any) => g.members as string[]))];
@@ -57,7 +58,7 @@ export default function AdminScreen() {
         memberNames: (g.members as string[]).map((uid: string) => nameMap[uid] ?? uid),
       })));
       setLoadingGroups(false);
-    });
+    }, () => setLoadingGroups(false));
     return unsub;
   }, [tab]);
 
