@@ -4,7 +4,7 @@ import {
   Pressable, ActivityIndicator, Alert,
 } from 'react-native';
 import { Redirect } from 'expo-router';
-import { doc, setDoc, deleteDoc, serverTimestamp, collection, query, where, getDocs, writeBatch, onSnapshot, arrayRemove } from 'firebase/firestore';
+import { doc, setDoc, deleteDoc, updateDoc, serverTimestamp, collection, query, where, getDocs, writeBatch, onSnapshot, arrayRemove } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { useMatchResults } from '../hooks/useMatchResults';
@@ -71,6 +71,26 @@ export default function AdminScreen() {
     );
   }
 
+  async function unbanUser(u: UserProfile) {
+    Alert.alert(
+      'Desbloquear usuario',
+      `¿Desbloquear a ${u.displayName}? Podrá volver a entrar en la app.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Desbloquear', onPress: async () => {
+            try {
+              await updateDoc(doc(db, 'users', u.uid), { banned: false });
+              Alert.alert('Hecho', `${u.displayName} desbloqueado`);
+            } catch {
+              Alert.alert('Error', 'No se pudo desbloquear el usuario');
+            }
+          },
+        },
+      ]
+    );
+  }
+
   const sections = useMemo(() => {
     const bySection = new Map<string, Match[]>();
     for (const m of liveMatches) {
@@ -129,8 +149,8 @@ export default function AdminScreen() {
               </View>
               {u.uid !== user?.uid && (
                 <Pressable
-                  style={[(u as any).banned ? styles.bannedBtn : styles.deleteBtn]}
-                  onPress={() => !(u as any).banned && banUser(u)}
+                  style={(u as any).banned ? styles.bannedBtn : styles.deleteBtn}
+                  onPress={() => (u as any).banned ? unbanUser(u) : banUser(u)}
                 >
                   <Text style={(u as any).banned ? styles.bannedText : styles.deleteText}>
                     {(u as any).banned ? 'Bloqueado' : 'Bloquear'}
