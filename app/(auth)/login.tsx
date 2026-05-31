@@ -1,27 +1,30 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, Pressable, StyleSheet,
-  KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator,
+  KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator, Image,
 } from 'react-native';
 import { Link, router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 import { useAuth } from '../../contexts/AuthContext';
-import { C } from '../../constants/theme';
-import { GradientButton } from '../../components/GradientButton';
+import { T } from '../../constants/theme';
+
+const logo = require('../../assets/portada logo.png');
 
 WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen() {
   const { signIn, signInWithGoogle } = useAuth();
-  const [email, setEmail] = useState('');
+  const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState('');
+  const [emailFocus, setEmailFocus]       = useState(false);
+  const [passwordFocus, setPasswordFocus] = useState(false);
 
   const [, googleResponse, promptGoogleAsync] = Google.useAuthRequest({
     androidClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID,
-    webClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB,
+    webClientId:     process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB,
   });
 
   React.useEffect(() => {
@@ -53,38 +56,76 @@ export default function LoginScreen() {
   }
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: C.surface }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+
+        {/* Logo */}
         <View style={styles.header}>
-          <Text style={styles.emoji}>⚽</Text>
-          <Text style={styles.title}>Porras Mundial 2026</Text>
-          <Text style={styles.sub}>Predice. Compite. Gana.</Text>
+          <Image source={logo} style={styles.logoImg} resizeMode="contain" />
         </View>
 
+        {/* Formulario */}
         <View style={styles.form}>
-          <TextInput style={styles.input} placeholder="Correo electrónico" placeholderTextColor={C.textTertiary} value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" autoComplete="email" />
-          <TextInput style={styles.input} placeholder="Contraseña" placeholderTextColor={C.textTertiary} value={password} onChangeText={setPassword} secureTextEntry autoComplete="password" />
+          <TextInput
+            style={[styles.input, emailFocus && styles.inputFocus]}
+            placeholder="Correo electrónico"
+            placeholderTextColor={T.color.ink3}
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
+            autoComplete="email"
+            onFocus={() => setEmailFocus(true)}
+            onBlur={() => setEmailFocus(false)}
+          />
+          <TextInput
+            style={[styles.input, passwordFocus && styles.inputFocus]}
+            placeholder="Contraseña"
+            placeholderTextColor={T.color.ink3}
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            autoComplete="password"
+            onFocus={() => setPasswordFocus(true)}
+            onBlur={() => setPasswordFocus(false)}
+          />
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
-          <GradientButton label="Entrar" onPress={handleLogin} loading={loading} variant="green" style={{ marginTop: 4 }} />
+          <Pressable
+            style={[styles.btn, loading && styles.btnDisabled]}
+            onPress={handleLogin}
+            disabled={loading}
+          >
+            {loading
+              ? <ActivityIndicator color="#fff" />
+              : <Text style={styles.btnText}>Entrar</Text>}
+          </Pressable>
 
+          {/* Separador */}
           <View style={styles.divider}>
             <View style={styles.line} />
             <Text style={styles.or}>o</Text>
             <View style={styles.line} />
           </View>
 
+          {/* Google */}
           <Pressable style={styles.googleBtn} onPress={() => promptGoogleAsync()} disabled={loading}>
+            <Image
+              source={{ uri: 'https://www.google.com/favicon.ico' }}
+              style={styles.googleIcon}
+            />
             <Text style={styles.googleText}>Continuar con Google</Text>
           </Pressable>
         </View>
 
+        {/* Pie */}
         <Link href="/(auth)/register" asChild>
-          <Pressable style={styles.registerLink}>
-            <Text style={styles.registerText}>¿No tienes cuenta? <Text style={styles.registerCta}>Regístrate</Text></Text>
+          <Pressable style={styles.footer}>
+            <Text style={styles.footerText}>¿No tienes cuenta? <Text style={styles.footerCta}>Regístrate</Text></Text>
           </Pressable>
         </Link>
+
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -93,39 +134,56 @@ export default function LoginScreen() {
 function mapFirebaseError(e: unknown): string {
   const code = (e as { code?: string }).code;
   if (code === 'auth/invalid-credential') return 'Correo o contraseña incorrectos';
-  if (code === 'auth/user-not-found') return 'No existe una cuenta con este correo';
-  if (code === 'auth/wrong-password') return 'Contraseña incorrecta';
-  if (code === 'auth/too-many-requests') return 'Demasiados intentos. Intenta más tarde';
+  if (code === 'auth/user-not-found')     return 'No existe una cuenta con este correo';
+  if (code === 'auth/wrong-password')     return 'Contraseña incorrecta';
+  if (code === 'auth/too-many-requests')  return 'Demasiados intentos. Intenta más tarde';
   return 'Error al iniciar sesión';
 }
 
 const styles = StyleSheet.create({
-  container: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 28, paddingVertical: 48, gap: 36 },
-  header: { alignItems: 'center', gap: 8 },
-  emoji: { fontSize: 60 },
-  title: { color: C.textPrimary, fontSize: 26, fontWeight: '800' },
-  sub: { color: C.textSecondary, fontSize: 15 },
-  form: { gap: 12 },
+  flex:      { flex: 1, backgroundColor: T.color.bg },
+  container: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 26, paddingVertical: 24, gap: 20 },
+
+  // Header
+  header:  { alignItems: 'center', gap: 12 },
+  logoImg: { width: '100%', aspectRatio: 1, marginBottom: -8 },
+  title:   { color: T.color.ink, fontSize: 26, fontFamily: 'SchibstedGrotesk_800ExtraBold', textAlign: 'center' },
+  sub:     { color: T.color.ink2, fontSize: 14, fontFamily: 'HankenGrotesk_500Medium', textAlign: 'center' },
+
+  // Form
+  form:  { gap: 10 },
   input: {
-    backgroundColor: C.bg,
+    backgroundColor: T.color.surface,
     borderRadius: 14,
     paddingHorizontal: 16,
-    paddingVertical: 15,
-    color: C.textPrimary,
+    paddingVertical: 13,
+    color: T.color.ink,
     fontSize: 16,
+    fontFamily: 'HankenGrotesk_500Medium',
     borderWidth: 1,
-    borderColor: C.border,
+    borderColor: T.color.line,
+    ...T.shadow,
   },
-  error: { color: C.miss, fontSize: 13, textAlign: 'center' },
-  btn: { backgroundColor: C.green, borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
+  inputFocus: { borderColor: T.color.accent },
+  error: { color: T.color.danger, fontSize: 13, fontFamily: 'HankenGrotesk_500Medium', textAlign: 'center' },
+
+  // Botón entrar
+  btn:         { backgroundColor: T.color.accent, borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginTop: 4 },
   btnDisabled: { opacity: 0.5 },
-  btnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  btnText:     { color: '#fff', fontSize: 16, fontFamily: 'SchibstedGrotesk_700Bold' },
+
+  // Separador
   divider: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  line: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: C.border },
-  or: { color: C.textTertiary, fontSize: 13 },
-  googleBtn: { backgroundColor: C.surface, borderRadius: 14, paddingVertical: 16, alignItems: 'center', borderWidth: 1, borderColor: C.border },
-  googleText: { color: C.textPrimary, fontSize: 16, fontWeight: '600' },
-  registerLink: { alignItems: 'center' },
-  registerText: { color: C.textSecondary, fontSize: 14 },
-  registerCta: { color: C.accent, fontWeight: '700' },
+  line:    { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: T.color.line },
+  or:      { color: T.color.ink3, fontSize: 13, fontFamily: 'HankenGrotesk_500Medium' },
+
+  // Google
+  googleBtn:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, backgroundColor: T.color.surface, borderRadius: 14, paddingVertical: 15, borderWidth: 1, borderColor: T.color.line, ...T.shadow },
+  googleIcon: { width: 20, height: 20 },
+  googleText: { color: T.color.ink, fontSize: 15, fontFamily: 'HankenGrotesk_700Bold' },
+
+  // Pie
+  footer:    { alignItems: 'center' },
+  footerText:{ color: T.color.ink2, fontSize: 18, fontFamily: 'HankenGrotesk_500Medium' },
+  footerCta: { color: T.color.accent, fontFamily: 'HankenGrotesk_700Bold' },
 });
